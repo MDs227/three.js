@@ -41,7 +41,27 @@ export function buildInterior( ctx ) {
 
 	};
 
-	const prismG = () => new THREE.CylinderGeometry( 1, 1, 1, 3 ).rotateZ( Math.PI / 2 ).rotateX( Math.PI / 2 ); // triangle faces ±X, apex up
+	// extruded rounded triangle in unit square (cap uv = shape xy), cap faces ±X, base at y=0, centred in z
+	const prismG = ( right = false ) => {
+
+		const s = new THREE.Shape();
+		if ( right ) {
+
+			s.moveTo( 0.02, 0 ); s.lineTo( 1, 0 ); s.lineTo( 0.02, 1 ); s.lineTo( 0.02, 0 );
+
+		} else {
+
+			s.moveTo( 0.12, 0 ); s.lineTo( 0.88, 0 ); s.quadraticCurveTo( 1.0, 0, 0.95, 0.12 );
+			s.lineTo( 0.58, 0.92 ); s.quadraticCurveTo( 0.5, 1.04, 0.42, 0.92 );
+			s.lineTo( 0.05, 0.12 ); s.quadraticCurveTo( 0, 0, 0.12, 0 );
+
+		}
+
+		const g = new THREE.ExtrudeGeometry( s, { depth: 1, bevelEnabled: false, curveSegments: 3 } );
+		g.translate( - 0.5, 0, - 0.5 ).rotateY( Math.PI / 2 );
+		return g;
+
+	};
 	const defs = {
 		box: [ mkGeo( new THREE.BoxGeometry( 1, 1, 1 ), 'box' ), MAT.prod ],
 		bag: [ mkGeo( bagG(), 'bag' ), MAT.prod ],
@@ -49,7 +69,7 @@ export function buildInterior( ctx ) {
 		bottle: [ mkGeo( bottleG(), 'bottle' ), MAT.prod ],
 		can: [ mkGeo( new THREE.CylinderGeometry( 0.033, 0.033, 0.12, 10 ).translate( 0, 0.06, 0 ), 'can' ), MAT.prod ],
 		onigiri: [ mkGeo( prismG(), 'onigiri' ), MAT.prod ],
-		sand: [ mkGeo( prismG(), 'sand' ), MAT.prod ],
+		sand: [ mkGeo( prismG( true ), 'sand' ), MAT.prod ],
 		bento: [ mkGeo( new THREE.BoxGeometry( 1, 1, 1 ), 'bento' ), MAT.prod ],
 		pudding: [ mkGeo( new THREE.CylinderGeometry( 0.042, 0.034, 0.06, 12 ).translate( 0, 0.03, 0 ), 'pudding' ), MAT.prod ],
 	};
@@ -82,11 +102,11 @@ export function buildInterior( ctx ) {
 	for ( const x of [ - 6.3, - 3.85, - 0.95, 2.6 ] ) for ( const z of [ - 1.6, - 4.4, - 7.2, - 10.0 ] ) {
 
 		bx( MAT.intMatte, 0xcfcfca, x - 0.14, x + 0.14, 2.985, 2.99, z - 1.25, z + 1.25 );
-		B.add( new THREE.PlaneGeometry( 0.2, 2.4 ), MAT.emit, M( x, 2.982, z, Math.PI / 2 ), glow( 2.5, 2.4, 2.2 ) );
+		B.add( new THREE.PlaneGeometry( 0.2, 2.4 ), MAT.emit, M( x, 2.982, z, Math.PI / 2 ), glow( 1.9, 1.82, 1.7 ) );
 
 	}
 
-	for ( const z of [ - 5.3, - 8.2 ] ) B.add( new THREE.PlaneGeometry( 1.6, 0.2 ), MAT.emit, M( 6.4, 2.982, z, Math.PI / 2 ), glow( 2.5, 2.4, 2.2 ) );
+	for ( const z of [ - 5.3, - 8.2 ] ) B.add( new THREE.PlaneGeometry( 1.6, 0.2 ), MAT.emit, M( 6.4, 2.982, z, Math.PI / 2 ), glow( 1.9, 1.82, 1.7 ) );
 	// smoke detectors / vents
 	for ( const [ x, z ] of [ [ - 5, - 3 ], [ 1.5, - 6 ], [ 5, - 10 ] ] ) cyl( MAT.intMatte, 0xf8f8f8, 0.07, 0.07, 0.03, 12, x, 2.985, z );
 	for ( const [ x, z ] of [ [ - 2.4, - 6 ], [ 4.2, - 2.5 ] ] ) {
@@ -182,7 +202,7 @@ export function buildInterior( ctx ) {
 
 					}
 
-					const rows = t === 'bottle' ? 4 : 3;
+					const rows = t === 'bottle' ? 3 : 2;
 					for ( let r = 0; r < rows; r ++ ) {
 
 						const x = cx + s * ( 0.41 - dims[ 2 ] / 2 - r * ( dims[ 2 ] + 0.01 ) );
@@ -217,7 +237,7 @@ export function buildInterior( ctx ) {
 			}
 
 			bx( MAT.intGloss, WHITE, cx - 0.47, cx + 0.47, 1.5, 1.54, Math.min( ze, ze + s * 0.37 ), Math.max( ze, ze + s * 0.37 ) );
-			quad( MAT.decal, D.kanban, 0.5, 0.32, cx, 1.75, ze + s * 0.2, s > 0 ? 0 : Math.PI );
+			quad( MAT.decalLit, D.kanban, 0.5, 0.32, cx, 1.75, ze + s * 0.2, s > 0 ? 0 : Math.PI );
 			box( MAT.intMetal, 0x999999, 0.02, 0.2, 0.02, cx, 1.6, ze + s * 0.2 );
 
 		}
@@ -269,7 +289,7 @@ export function buildInterior( ctx ) {
 				for ( let x = dx0 + 0.04, k = 0; x < dx0 + dw - 0.1; x += step, k ++ ) {
 
 					if ( k % 3 === 0 ) col = hue();
-					for ( let r = 0; r < 3; r ++ ) put( type, M( x, y, zf - 0.16 - r * 0.15, 0, 0, 0, type === 'can' ? 1.15 : 1.25, type === 'can' ? 1.15 : 1.25, type === 'can' ? 1.15 : 1.25 ), col );
+					for ( let r = 0; r < 2; r ++ ) put( type, M( x, y, zf - 0.16 - r * 0.15, 0, 0, 0, type === 'can' ? 1.15 : 1.25, type === 'can' ? 1.15 : 1.25, type === 'can' ? 1.15 : 1.25 ), col );
 
 				}
 
@@ -311,7 +331,7 @@ export function buildInterior( ctx ) {
 		const xb = - 7.78, xf = - 6.85, za = - 10.4, zc = - 2.0;
 		bx( MAT.intGloss, DARK, xb, xf, 0, 0.38, za, zc );
 		bx( MAT.intGloss, 0x2f3540, xb, xb + 0.1, 0, 2.1, za, zc );
-		B.add( new THREE.PlaneGeometry( zc - za, 1.55 ), MAT.emit, M( xb + 0.105, 1.15, ( za + zc ) / 2, 0, Math.PI / 2, 0 ), glow( 1.0, 1.0, 0.97 ) );
+		B.add( new THREE.PlaneGeometry( zc - za, 1.55 ), MAT.emit, M( xb + 0.105, 1.15, ( za + zc ) / 2, 0, Math.PI / 2, 0 ), glow( 0.78, 0.82, 0.86 ) );
 		bx( MAT.intGloss, 0x2f3540, xb, xf - 0.05, 1.92, 2.15, za, zc );
 		for ( const z of [ za, zc ] ) bx( MAT.intGloss, 0x2f3540, xb, xf, 0, 2.15, z - 0.03, z + 0.03 );
 		// lit label strip on canopy front
@@ -333,12 +353,12 @@ export function buildInterior( ctx ) {
 					const rows = Math.floor( d / 0.16 );
 					if ( key === 'c_onigiri' ) {
 
-						for ( let r = 0; r < rows; r ++ ) put( 'onigiri', M( xs - 0.07 - r * 0.15, y + 0.055, z + 0.05, 0, 0, 0.12, 0.035, 0.065, 0.062 ), [ 0xffffff, 0xffe6e0, 0xfff7d8, 0xe9ffe0 ][ Math.floor( z * 7 ) & 3 ] );
+						for ( let r = 0; r < rows; r ++ ) put( 'onigiri', M( xs - 0.07 - r * 0.15, y + 0.005, z + 0.05, 0, 0, 0.18, 0.045, 0.1, 0.1 ), [ 0xffffff, 0xffe6e0, 0xfff7d8, 0xe9ffe0 ][ Math.floor( z * 7 ) & 3 ] );
 						z += 0.105;
 
 					} else if ( key === 'c_sand' ) {
 
-						for ( let r = 0; r < rows; r ++ ) put( 'sand', M( xs - 0.08 - r * 0.16, y + 0.075, z + 0.06, 0, 0, 0.1, 0.05, 0.09, 0.085 ), 0xffffff );
+						for ( let r = 0; r < rows; r ++ ) put( 'sand', M( xs - 0.08 - r * 0.16, y + 0.005, z + 0.06, 0, 0, 0.15, 0.05, 0.11, 0.11 ), 0xffffff );
 						z += 0.13;
 
 					} else if ( key === 'c_bento' ) {
@@ -559,13 +579,13 @@ export function buildInterior( ctx ) {
 		// sloped console with screen
 		const cm = M( xf + 0.12, 0.98, zm - 0.08, 0, - Math.PI / 2, 0 );
 		const g1 = new THREE.BoxGeometry( 0.62, 0.04, 0.3 ); g1.applyMatrix4( M( 0, 0, 0, 0.55, 0, 0 ) ); g1.applyMatrix4( cm ); B.add( g1, MAT.intGloss, null, 0x2b2f35 );
-		const sg = quadGeo( 0.36, 0.27, E.atmscreen ); sg.applyMatrix4( M( - 0.1, 0.01, 0, - Math.PI / 2 + 0.55, 0, 0 ) ); sg.applyMatrix4( M( 0, 0.012, 0 ) ); sg.applyMatrix4( cm );
+		const sg = quadGeo( 0.36, 0.27, E.atmscreen ); sg.applyMatrix4( M( - 0.1, 0, 0, - Math.PI / 2 + 0.55, 0, 0 ) ); sg.applyMatrix4( M( 0, 0.024 * Math.cos( 0.55 ), 0.024 * Math.sin( 0.55 ) ) ); sg.applyMatrix4( cm );
 		B.add( sg, MAT.emitTex, null, glow( 1.4, 1.4, 1.4 ) );
 		// keypad (3x4) at right of screen
 		for ( let r = 0; r < 4; r ++ ) for ( let c = 0; c < 3; c ++ ) {
 
 			const kg = new THREE.BoxGeometry( 0.032, 0.012, 0.028 );
-			kg.applyMatrix4( M( 0.16 + c * 0.04, 0.02, - 0.06 + r * 0.035, 0.55, 0, 0 ) ); kg.applyMatrix4( cm );
+			kg.applyMatrix4( M( 0.16 + c * 0.04, 0, - 0.06 + r * 0.035 ) ); kg.applyMatrix4( M( 0, 0.026 * Math.cos( 0.55 ), 0.026 * Math.sin( 0.55 ), 0.55, 0, 0 ) ); kg.applyMatrix4( cm );
 			B.add( kg, MAT.intGloss, null, r === 3 && c !== 1 ? ( c === 0 ? 0xd7262e : 0x2fb37a ) : 0xe8e8e8 );
 
 		}

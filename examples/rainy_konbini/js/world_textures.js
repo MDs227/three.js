@@ -4,12 +4,13 @@ import { Atlas, canvasTex, fitText, vText, roundRect, font, rng } from './world_
 
 const BLUE = '#1b4fa0', GREEN = '#2fb37a', ORANGE = '#f39a2b';
 
-function moonLogo( c, x, y, r ) {
+function moonLogo( c, x, y, r, bg = '#f6f8f4' ) {
 
 	c.save();
+	c.beginPath(); c.arc( x, y, r, 0, Math.PI * 2 ); c.clip();
 	c.fillStyle = ORANGE;
 	c.beginPath(); c.arc( x, y, r, 0, Math.PI * 2 ); c.fill();
-	c.globalCompositeOperation = 'destination-out';
+	c.fillStyle = bg;
 	c.beginPath(); c.arc( x + r * 0.45, y - r * 0.3, r * 0.85, 0, Math.PI * 2 ); c.fill();
 	c.restore();
 
@@ -72,7 +73,7 @@ export function makeTextures( renderer, Q ) {
 
 		c.fillStyle = '#f4f6f2'; c.fillRect( 0, 0, w, h );
 		c.fillStyle = BLUE; c.fillRect( 0, 0, w, 300 );
-		moonLogo( c, w / 2, 110, 70 );
+		moonLogo( c, w / 2, 110, 70, BLUE );
 		c.fillStyle = '#fff'; fitText( c, 'ツキマート', w / 2, 230, 460, 96, 900 );
 		c.fillStyle = GREEN; c.fillRect( 0, 300, w, 34 );
 		c.fillStyle = ORANGE; c.fillRect( 0, 334, w, 14 );
@@ -248,7 +249,7 @@ export function makeTextures( renderer, Q ) {
 
 		c.fillStyle = '#f2e9c8'; c.fillRect( 0, 0, w, h );
 		c.fillStyle = BLUE; c.fillRect( 0, 0, w, 60 );
-		moonLogo( c, w / 2, 30, 20 );
+		moonLogo( c, w / 2, 30, 20, BLUE );
 		c.fillStyle = BLUE; vText( c, 'ツキマート', w / 2, 100, 44, 1.05, 900 );
 		c.fillStyle = '#c0392b'; vText( c, 'この先', w / 2, 330, 18, 1.1, 800 );
 		c.fillStyle = '#222'; fitText( c, '30m →', w / 2, 388, 100, 20, 800 );
@@ -900,10 +901,12 @@ export function makeTextures( renderer, Q ) {
 	} );
 	P.draw( 'onigiri', 128, 128, ( c, w, h ) => {
 
-		c.fillStyle = '#fbfbf6'; c.fillRect( 0, 0, w, h );
-		c.fillStyle = '#18221a'; c.fillRect( 34, 0, 60, h );
-		c.fillStyle = '#e33'; c.fillRect( 0, 112, w, 6 );
-		c.fillStyle = '#f2f2f2'; c.font = font( 14, 900 ); c.textAlign = 'center'; c.fillText( '鮭', 64, 70 );
+		c.fillStyle = '#f7f7f2'; c.fillRect( 0, 0, w, h );
+		c.fillStyle = 'rgba(0,0,0,0.06)'; for ( let i = 0; i < 60; i ++ ) c.fillRect( ( i * 37 ) % w, ( i * 53 ) % h, 3, 2 );
+		c.fillStyle = '#16201a'; c.fillRect( 30, 62, 68, 66 );
+		c.fillStyle = '#e53935'; c.fillRect( 0, 52, w, 9 );
+		c.fillStyle = '#fff'; c.fillRect( 40, 78, 48, 26 );
+		c.fillStyle = '#c62828'; c.font = font( 18, 900 ); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText( '鮭', 64, 92 );
 
 	} );
 	P.draw( 'bento', 128, 128, ( c, w, h ) => {
@@ -926,10 +929,12 @@ export function makeTextures( renderer, Q ) {
 	} );
 	P.draw( 'sand', 128, 128, ( c, w, h ) => {
 
-		c.fillStyle = '#f3e6c4'; c.fillRect( 0, 0, w, h );
-		c.fillStyle = '#f2c94c'; c.fillRect( 0, 50, w, 16 );
-		c.fillStyle = '#5fa83a'; c.fillRect( 0, 66, w, 8 );
-		c.fillStyle = '#e57373'; c.fillRect( 0, 74, w, 10 );
+		c.fillStyle = '#c8955a'; c.fillRect( 0, 0, w, h );
+		c.fillStyle = '#f6ecd2'; c.beginPath(); c.moveTo( 10, 118 ); c.lineTo( 118, 118 ); c.lineTo( 10, 10 ); c.fill();
+		c.fillStyle = '#f2c94c'; c.beginPath(); c.moveTo( 40, 118 ); c.lineTo( 62, 118 ); c.lineTo( 40, 96 ); c.fill();
+		c.fillStyle = '#5fa83a'; c.fillRect( 44, 30, 10, 88 );
+		c.fillStyle = '#e57373'; c.fillRect( 56, 50, 12, 68 );
+		c.fillStyle = '#f2c94c'; c.fillRect( 30, 20, 12, 98 );
 
 	} );
 	T.prod = P.texture( aniso );

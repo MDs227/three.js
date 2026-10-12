@@ -9,6 +9,7 @@ const sstep = ( a, b, x ) => { const t = clamp( ( x - a ) / ( b - a ), 0, 1 ); r
 const sstep5 = ( t ) => { t = clamp( t, 0, 1 ); return t * t * t * ( t * ( t * 6 - 15 ) + 10 ); };
 const spow = ( v, e ) => Math.sign( v ) * Math.pow( Math.abs( v ), e );
 const TAU = Math.PI * 2;
+const DBG = {}; // internal debug switches (noCol, noGoal, noSpace)
 
 function mulberry( seed ) {
 	return function () {
@@ -33,15 +34,15 @@ function worldP( obj, v ) { return v.setFromMatrixPosition( obj.matrixWorld ); }
 // ───────────────────────────────────────────────────────────── gait table
 const GV = [ 0, 1.5, 3.6, 5.6 ];
 const GAIT = {
-	freq: [ 0.9, 1.1, 1.48, 1.76 ],
-	duty: [ 0.62, 0.58, 0.32, 0.26 ],
+	freq: [ 0.95, 1.22, 1.48, 1.76 ],
+	duty: [ 0.6, 0.56, 0.32, 0.26 ],
 	lift: [ 0.02, 0.055, 0.20, 0.26 ],
 	liftPeak: [ 0.45, 0.42, 0.36, 0.33 ],
-	hipDrop: [ 0.006, 0.014, 0.040, 0.060 ],
-	bob: [ 0.0, 0.013, 0.030, 0.036 ],
+	hipDrop: [ 0.006, 0.022, 0.040, 0.060 ],
+	bob: [ 0.0, 0.018, 0.030, 0.036 ],
 	sway: [ 0.0, 0.018, 0.010, 0.007 ],
 	lean: [ 0.02, 0.05, 0.15, 0.26 ],
-	armSwing: [ 0.0, 0.30, 0.55, 0.78 ],
+	armSwing: [ 0.0, 0.30, 0.55, 0.70 ],
 	armBase: [ 0.0, 0.03, 0.16, 0.26 ],
 	elbow: [ 0.20, 0.30, 1.30, 1.45 ],
 	elbowVar: [ 0.0, 0.12, 0.22, 0.28 ],
@@ -106,6 +107,23 @@ function ringGeometry( rings, seg, n = 2, axis = 'y' ) {
 		g.index.needsUpdate = true;
 		g.computeVertexNormals();
 	}
+	return g;
+}
+
+// radial fabric folds around a Y axis through (cx, cz)
+function addFolds( g, amp, nA, fy, mask, cx = 0, cz = 0, phase = 0 ) {
+	const P = g.attributes.position;
+	for ( let i = 0; i < P.count; i ++ ) {
+		const x = P.getX( i ) - cx, y = P.getY( i ), z = P.getZ( i ) - cz;
+		const r = Math.hypot( x, z );
+		if ( r < 1e-4 ) continue;
+		const a = Math.atan2( x, z );
+		const m = mask( y, a );
+		if ( m <= 0 ) continue;
+		const k = 1 + amp * m * ( Math.sin( a * nA + y * fy + phase ) * 0.7 + Math.sin( a * nA * 1.7 - y * fy * 0.6 + 1.3 + phase ) * 0.3 );
+		P.setX( i, cx + x * k ); P.setZ( i, cz + z * k );
+	}
+	g.computeVertexNormals();
 	return g;
 }
 
@@ -209,9 +227,10 @@ function makeFaceTexture( skinHex ) {
 		g.fillStyle = gr; g.fillRect( 0, 0, FACE_S, FACE_S );
 	}
 	// eyes
-	const EY = - 0.015;
+	const EY = - 0.019;
 	for ( const s of [ - 1, 1 ] ) {
 		const cx = s * 0.0285, cy = EY;
+		g.save(); g.translate( px( cx ), py( cy ) ); g.scale( 1.18, 1.18 ); g.translate( - px( cx ), - py( cy ) );
 		const inner = cx - s * 0.0118, outer = cx + s * 0.0128;
 		// eye shape path (upper lid arc + lower lid arc)
 		const shape = () => {
@@ -267,16 +286,17 @@ function makeFaceTexture( skinHex ) {
 		g.strokeStyle = '#3b2628'; g.lineWidth = 0.0013 * m;
 		g.beginPath(); g.moveTo( px( cx - s * 0.010 ), py( cy + 0.0215 ) );
 		g.quadraticCurveTo( px( cx + s * 0.002 ), py( cy + 0.0255 ), px( cx + s * 0.0125 ), py( cy + 0.0225 ) ); g.stroke();
+		g.restore();
 	}
 	// nose
 	g.strokeStyle = 'rgba(200,120,110,0.75)'; g.lineWidth = 0.0009 * m; g.lineCap = 'round';
-	g.beginPath(); g.moveTo( px( 0.0015 ), py( - 0.043 ) ); g.lineTo( px( - 0.0005 ), py( - 0.0455 ) ); g.stroke();
+	g.beginPath(); g.moveTo( px( 0.0015 ), py( - 0.042 ) ); g.lineTo( px( - 0.0005 ), py( - 0.0445 ) ); g.stroke();
 	// mouth
 	g.strokeStyle = '#a4525a'; g.lineWidth = 0.0011 * m;
-	g.beginPath(); g.moveTo( px( - 0.0055 ), py( - 0.0655 ) );
-	g.quadraticCurveTo( px( 0 ), py( - 0.0672 ), px( 0.0055 ), py( - 0.0655 ) ); g.stroke();
+	g.beginPath(); g.moveTo( px( - 0.0055 ), py( - 0.0610 ) );
+	g.quadraticCurveTo( px( 0 ), py( - 0.0628 ), px( 0.0055 ), py( - 0.0610 ) ); g.stroke();
 	g.fillStyle = 'rgba(230,140,140,0.35)';
-	g.beginPath(); g.ellipse( px( 0 ), py( - 0.0688 ), 0.0035 * m, 0.0012 * m, 0, 0, TAU ); g.fill();
+	g.beginPath(); g.ellipse( px( 0 ), py( - 0.0642 ), 0.0035 * m, 0.0012 * m, 0, 0, TAU ); g.fill();
 
 	const t = new THREE.CanvasTexture( c );
 	t.colorSpace = THREE.SRGBColorSpace;
@@ -300,14 +320,14 @@ function makeHairTexture() {
 }
 
 // ───────────────────────────────────────────────────────────── constants
-const HS = 1.1;                                            // head scale (anime proportions)
+const HS = 1.14;                                           // head scale (anime proportions)
 const HC0 = new THREE.Vector3( 0, 0.075, 0.008 );          // head centre (unscaled head geometry space)
 const CAP_R0 = new THREE.Vector3( 0.087, 0.101, 0.098 );   // hair cap ellipsoid radii (unscaled)
 const HC = HC0.clone().multiplyScalar( HS );               // scaled, in head-bone space
 const CAP_R = CAP_R0.clone().multiplyScalar( HS );
 const ANKLE_H = 0.065, HEEL_Z = - 0.05, BALL_Z = 0.115;
 const L_THIGH = 0.37, L_SHIN = 0.365, L_UARM = 0.26, L_FARM = 0.23;
-const GRIP_C = new THREE.Vector3( 0.024, - 0.062, 0.0 );    // right fist hole centre (hand space)
+const GRIP_C = new THREE.Vector3( 0.027, - 0.071, 0.0 );    // right fist hole centre (hand space)
 
 // umbrella dims (umbrella space: origin at the open-grip point on the shaft, +Y toward the tip)
 const UMB = { apexY: 0.70, ribLen: 0.56, ribs: 8, runnerOpen: 0.45, runnerClosed: 0.19, tipY: 0.76, stretchS: 0.36 };
@@ -357,7 +377,7 @@ export class Girl {
 		mk( 'spine', B.hips, 0, 0.10, 0 );
 		mk( 'chest', B.spine, 0, 0.14, 0 );
 		mk( 'neck', B.chest, 0, 0.19, - 0.012 );
-		mk( 'head', B.neck, 0, 0.096, 0.012 );
+		mk( 'head', B.neck, 0, 0.092, 0.012 );
 		for ( const [ S, sx ] of [ [ 'L', 1 ], [ 'R', - 1 ] ] ) {
 			mk( 'shoulder' + S, B.chest, 0.035 * sx, 0.155, - 0.01 );
 			mk( 'upperArm' + S, B[ 'shoulder' + S ], 0.13 * sx, 0, 0 );
@@ -368,7 +388,7 @@ export class Girl {
 			mk( 'foot' + S, B[ 'shin' + S ], 0, - L_SHIN, 0 );
 			mk( 'string' + S, B.chest, 0.03 * sx, 0.142, 0.104 );
 		}
-		mk( 'bag', B.hips, 0.2, 0.0, 0.035 );
+		mk( 'bag', B.hips, 0.175, 0.0, - 0.075 );
 		this.root.add( B.hips );
 		this.root.updateMatrixWorld( true );
 		this.bind = {};
@@ -399,8 +419,22 @@ export class Girl {
 			} ),
 			metal: new THREE.MeshStandardMaterial( { color: 0xc9ced6, metalness: 0.9, roughness: 0.28 } ),
 			plastic: new THREE.MeshPhysicalMaterial( { color: 0xeef2f6, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.1, transparent: true, opacity: 0.9 } ),
-			bead: new THREE.MeshPhysicalMaterial( { color: 0xffffff, roughness: 0.02, metalness: 0, clearcoat: 1, transparent: true, opacity: 0.7, envMapIntensity: 3.0, emissive: 0x9fb8d8, emissiveIntensity: 0.08 } ),
+			bead: new THREE.MeshPhysicalMaterial( { color: 0xdfe8f2, roughness: 0.0, metalness: 0, clearcoat: 1, clearcoatRoughness: 0, transparent: true, opacity: 0.85, envMapIntensity: 4.0, emissive: 0xbcd4f0, emissiveIntensity: 0.35, specularIntensity: 1 } ),
 		};
+		// subtle fresnel rim so dark hair / clear vinyl read in cold low light
+		const addRim = ( mat, rgb, power, alphaBoost = 0 ) => {
+			mat.onBeforeCompile = ( sh ) => {
+				sh.fragmentShader = sh.fragmentShader.replace( '#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+				{
+					float rimF = pow( 1.0 - clamp( abs( dot( normalize( normal ), normalize( vViewPosition ) ) ), 0.0, 1.0 ), ${power.toFixed( 2 )} );
+					totalEmissiveRadiance += vec3( ${rgb.map( v => v.toFixed( 3 ) ).join( ',' )} ) * rimF;
+					diffuseColor.a = max( diffuseColor.a, diffuseColor.a + rimF * ${alphaBoost.toFixed( 3 )} );
+				}` );
+			};
+			mat.customProgramCacheKey = () => 'girlRim' + power + rgb.join( ',' ) + alphaBoost;
+		};
+		addRim( this.mat.hair, [ 0.07, 0.09, 0.15 ], 3.0 );
+		addRim( this.mat.canopy, [ 0.10, 0.12, 0.16 ], 2.5, 0.35 );
 		this._baseColors = {
 			cloth: 1, skirt: this.mat.skirt.color.clone(), hair: this.mat.hair.color.clone(),
 		};
@@ -426,32 +460,33 @@ export class Girl {
 			[ 0.845, 0.002, 0.002, 0, 0 ],
 			[ 0.80, 0.142, 0.110, 0, 0 ],
 			[ 0.788, 0.156, 0.122, 0, 0 ],
-			[ 0.795, 0.163, 0.128, 0, 0 ],
-			[ 0.835, 0.160, 0.127, 0, 0 ],
+			[ 0.795, 0.168, 0.133, 0, 0 ],
+			[ 0.835, 0.164, 0.130, 0, 0 ],
 			[ 0.848, 0.165, 0.131, 0, 0.002 ],
 			[ 0.93, 0.166, 0.131, 0, 0.004 ],
 			[ 1.02, 0.161, 0.127, 0, 0.005 ],
 			[ 1.10, 0.157, 0.134, 0, 0.012 ],
 			[ 1.17, 0.155, 0.126, 0, 0.006 ],
-			[ 1.22, 0.150, 0.110, 0, - 0.004 ],
-			[ 1.255, 0.132, 0.094, 0, - 0.008 ],
-			[ 1.28, 0.098, 0.074, 0, - 0.01 ],
-			[ 1.298, 0.066, 0.058, 0, - 0.008 ],
-			[ 1.305, 0.052, 0.047, 0, - 0.006 ],
-			[ 1.29, 0.035, 0.032, 0, - 0.006 ],
+			[ 1.215, 0.158, 0.112, 0, - 0.004 ],
+			[ 1.25, 0.148, 0.098, 0, - 0.008 ],
+			[ 1.278, 0.118, 0.080, 0, - 0.01 ],
+			[ 1.306, 0.076, 0.064, 0, - 0.008 ],
+			[ 1.328, 0.058, 0.053, 0, - 0.006 ],
+			[ 1.30, 0.035, 0.032, 0, - 0.006 ],
 		], 30, 2.4 );
+		addFolds( torso, 0.04, 9, 18, ( y ) => sstep( 1.08, 0.86, y ) * sstep( 0.80, 0.86, y ), 0, 0.003 );
 		cloth.add( torso, I, torsoW, ( v ) => ( v.y < 0.84 && v.y > 0.786 ) ? creamBand : cream );
 		// kangaroo pocket
 		cloth.add( ellipsoid( 0, 0.905, 0.122, 0.105, 0.05, 0.022, 20, 10 ), I, torsoW, cream );
 		// shirt hem peeking + collar
 		cloth.add( ringGeometry( [ [ 0.79, 0.02, 0.02 ], [ 0.775, 0.150, 0.118 ], [ 0.80, 0.152, 0.120 ], [ 0.82, 0.02, 0.02 ] ], 26, 2.3 ), I, W( 'hips' ), white );
-		cloth.add( ringGeometry( [ [ 1.282, 0.050, 0.048, 0, 0.0 ], [ 1.30, 0.054, 0.052, 0, 0.0 ], [ 1.312, 0.047, 0.046, 0, 0.0 ], [ 1.31, 0.03, 0.03 ] ], 20 ), I, W( 'chest' ), white );
+		cloth.add( ringGeometry( [ [ 1.29, 0.053, 0.05, 0, 0.0 ], [ 1.318, 0.056, 0.054, 0, 0.0 ], [ 1.336, 0.047, 0.046, 0, 0.0 ], [ 1.33, 0.03, 0.03 ] ], 20 ), I, W( 'chest' ), white );
 		// hood roll + flap (chest space)
 		{
-			const roll = new THREE.TorusGeometry( 0.083, 0.03, 10, 22, Math.PI * 1.15 );
+			const roll = new THREE.TorusGeometry( 0.08, 0.028, 10, 22, Math.PI * 1.25 );
 			roll.applyMatrix4( new THREE.Matrix4().makeRotationX( Math.PI / 2 ) );
-			roll.applyMatrix4( new THREE.Matrix4().makeRotationY( Math.PI / 2 + Math.PI * 0.075 + Math.PI ) );
-			roll.applyMatrix4( new THREE.Matrix4().makeTranslation( 0, 0.17, - 0.012 ) );
+			roll.applyMatrix4( new THREE.Matrix4().makeRotationY( Math.PI / 2 + Math.PI * 0.125 + Math.PI ) );
+			roll.applyMatrix4( new THREE.Matrix4().makeTranslation( 0, 0.198, - 0.016 ) );
 			cloth.add( roll, bind.chest, W( 'chest' ), cream );
 			cloth.add( ellipsoid( 0, 0.09, - 0.105, 0.11, 0.085, 0.03, 18, 12 ), bind.chest, W( 'chest' ), cream );
 		}
@@ -463,8 +498,8 @@ export class Girl {
 		}
 		// crossbody bag strap (front + back), bag body on swinging bone
 		{
-			const front = tubePath( [ [ - 0.115, 1.262, 0.0 ], [ - 0.09, 1.235, 0.085 ], [ - 0.03, 1.15, 0.143 ], [ 0.06, 1.03, 0.142 ], [ 0.13, 0.94, 0.13 ], [ 0.175, 0.875, 0.09 ] ], 0.0075, 24, 4 );
-			const back = tubePath( [ [ - 0.115, 1.262, 0.0 ], [ - 0.10, 1.235, - 0.085 ], [ - 0.02, 1.13, - 0.132 ], [ 0.08, 1.0, - 0.135 ], [ 0.16, 0.9, - 0.09 ], [ 0.185, 0.86, - 0.02 ] ], 0.0075, 24, 4 );
+			const front = tubePath( [ [ - 0.115, 1.262, 0.0 ], [ - 0.09, 1.235, 0.085 ], [ - 0.03, 1.15, 0.143 ], [ 0.06, 1.03, 0.142 ], [ 0.145, 0.93, 0.115 ], [ 0.178, 0.875, 0.02 ] ], 0.0075, 24, 4 );
+			const back = tubePath( [ [ - 0.115, 1.262, 0.0 ], [ - 0.10, 1.235, - 0.085 ], [ - 0.02, 1.13, - 0.132 ], [ 0.08, 1.0, - 0.135 ], [ 0.15, 0.9, - 0.12 ], [ 0.172, 0.865, - 0.085 ] ], 0.0075, 24, 4 );
 			for ( const g of [ front, back ] ) {
 				g.scale( 1, 1, 1 );
 				cloth.add( g, I, torsoW, strap );
@@ -472,47 +507,51 @@ export class Girl {
 			const bag = ringGeometry( [
 				[ 0.015, 0.002, 0.002 ], [ 0.012, 0.045, 0.018 ], [ 0.0, 0.058, 0.024 ], [ - 0.08, 0.062, 0.026 ], [ - 0.11, 0.055, 0.023 ], [ - 0.118, 0.002, 0.002 ],
 			], 16, 3.2 );
-			bag.applyMatrix4( new THREE.Matrix4().makeRotationY( Math.PI / 2 - 0.25 ) );
+			bag.applyMatrix4( new THREE.Matrix4().makeRotationY( Math.PI / 2 + 0.35 ) );
 			bag.translate( 0.03, 0, 0 );
 			cloth.add( bag, bind.bag, W( 'bag' ), bagC );
-			cloth.add( ellipsoid( 0.03, - 0.02, 0.0, 0.012, 0.012, 0.004, 8, 6 ).rotateY( Math.PI / 2 - 0.25 ).translate( 0.0, 0, 0.0 ), bind.bag, W( 'bag' ), C( 0xd8c08a ) );
+			cloth.add( ellipsoid( 0.0, - 0.02, 0.0, 0.012, 0.012, 0.004, 8, 6 ).translate( 0, 0, 0.03 ).rotateY( Math.PI / 2 + 0.35 ).translate( 0.03, 0, 0 ), bind.bag, W( 'bag' ), C( 0xd8c08a ) );
 		}
 
 		// ── arms
 		for ( const [ S, sx ] of [ [ 'L', 1 ], [ 'R', - 1 ] ] ) {
 			const ua = 'upperArm' + S, fa = 'foreArm' + S, hd = 'hand' + S;
 			const sleeveU = ringGeometry( [
-				[ 0.04, 0.002, 0.002 ], [ 0.034, 0.04, 0.04 ], [ 0.015, 0.054, 0.054 ], [ - 0.03, 0.057, 0.056 ], [ - 0.12, 0.055, 0.054 ],
-				[ - 0.20, 0.052, 0.051 ], [ - 0.25, 0.05, 0.05 ], [ - 0.28, 0.048, 0.048 ], [ - 0.30, 0.036, 0.036 ], [ - 0.305, 0.002, 0.002 ],
+				[ 0.04, 0.002, 0.002 ], [ 0.034, 0.04, 0.04 ], [ 0.015, 0.054, 0.054 ], [ - 0.03, 0.057, 0.056 ], [ - 0.12, 0.054, 0.053 ],
+				[ - 0.20, 0.050, 0.049 ], [ - 0.25, 0.048, 0.048 ], [ - 0.28, 0.046, 0.046 ], [ - 0.30, 0.034, 0.034 ], [ - 0.305, 0.002, 0.002 ],
 			], 18 );
+			addFolds( sleeveU, 0.12, 3, 45, ( y ) => sstep( - 0.08, - 0.2, y ) * sstep( - 0.3, - 0.27, y ), 0, 0, sx );
 			cloth.add( sleeveU, bind[ ua ], ( v ) => { const t = sstep( - 0.2, - 0.29, v.y ) * 0.5; return [ [ W( ua ), 1 - t ], [ W( fa ), t ] ]; }, cream );
-			cloth.add( ellipsoid( - 0.004 * sx, 0.0, 0, 0.056, 0.058, 0.056 ), bind[ ua ], W( ua ), cream );
+			cloth.add( ellipsoid( - 0.008 * sx, - 0.008, 0, 0.056, 0.056, 0.056 ), bind[ ua ], W( ua ), cream );
 			cloth.add( ellipsoid( 0, 0.0, - 0.004, 0.049, 0.05, 0.049 ), bind[ fa ], W( fa ), cream );
 			const sleeveF = ringGeometry( [
-				[ 0.03, 0.002, 0.002 ], [ 0.02, 0.047, 0.047 ], [ - 0.05, 0.05, 0.05 ], [ - 0.15, 0.049, 0.049 ], [ - 0.205, 0.047, 0.047 ],
-				[ - 0.222, 0.041, 0.041 ], [ - 0.258, 0.038, 0.038 ], [ - 0.266, 0.036, 0.036 ], [ - 0.262, 0.027, 0.027 ], [ - 0.24, 0.002, 0.002 ],
+				[ 0.03, 0.002, 0.002 ], [ 0.02, 0.046, 0.046 ], [ - 0.05, 0.049, 0.048 ], [ - 0.13, 0.049, 0.048 ], [ - 0.19, 0.047, 0.046 ],
+				[ - 0.205, 0.040, 0.040 ], [ - 0.242, 0.037, 0.037 ], [ - 0.25, 0.035, 0.035 ], [ - 0.246, 0.026, 0.026 ], [ - 0.225, 0.002, 0.002 ],
 			], 18 );
-			cloth.add( sleeveF, bind[ fa ], W( fa ), ( v ) => v.y < - 0.215 ? creamBand : cream );
+			addFolds( sleeveF, 0.13, 3, 50, ( y ) => sstep( - 0.03, - 0.12, y ) * sstep( - 0.205, - 0.17, y ), 0, 0, 2 + sx );
+			cloth.add( sleeveF, bind[ fa ], W( fa ), ( v ) => v.y < - 0.2 ? creamBand : cream );
 			// hand
 			const pX = S === 'L' ? - 1 : 1;
-			skin.add( ringGeometry( [ [ 0.03, 0.002, 0.002 ], [ 0.02, 0.019, 0.021 ], [ - 0.01, 0.017, 0.022 ], [ - 0.02, 0.002, 0.002 ] ], 10 ), bind[ hd ], W( hd ) );
-			skin.add( ellipsoid( pX * 0.002, - 0.036, 0, 0.0155, 0.036, 0.031, 14, 10 ), bind[ hd ], W( hd ) );
+			const HSC = new THREE.Matrix4().makeScale( 1.15, 1.15, 1.15 );
+			const handM = bind[ hd ].clone().multiply( HSC );
+			skin.add( ringGeometry( [ [ 0.03, 0.002, 0.002 ], [ 0.02, 0.019, 0.021 ], [ - 0.01, 0.017, 0.022 ], [ - 0.02, 0.002, 0.002 ] ], 10 ), handM, W( hd ) );
+			skin.add( ellipsoid( pX * 0.002, - 0.036, 0, 0.0155, 0.036, 0.031, 14, 10 ), handM, W( hd ) );
 			if ( S === 'R' ) {
 				// fist curled around Z axis (grip hole)
-				skin.add( ellipsoid( pX * 0.021, - 0.066, - 0.002, 0.016, 0.019, 0.031, 14, 10 ), bind[ hd ], W( hd ) );
-				skin.add( ellipsoid( pX * 0.031, - 0.050, - 0.002, 0.009, 0.016, 0.029, 10, 8 ), bind[ hd ], W( hd ) );
-				skin.add( ellipsoid( pX * 0.020, - 0.045, 0.027, 0.010, 0.017, 0.010, 10, 8 ), bind[ hd ], W( hd ) );
+				skin.add( ellipsoid( pX * 0.021, - 0.066, - 0.002, 0.016, 0.019, 0.031, 14, 10 ), handM, W( hd ) );
+				skin.add( ellipsoid( pX * 0.031, - 0.050, - 0.002, 0.009, 0.016, 0.029, 10, 8 ), handM, W( hd ) );
+				skin.add( ellipsoid( pX * 0.020, - 0.045, 0.027, 0.010, 0.017, 0.010, 10, 8 ), handM, W( hd ) );
 			} else {
-				skin.add( ellipsoid( pX * 0.006, - 0.074, - 0.002, 0.012, 0.021, 0.029, 12, 8 ), bind[ hd ], W( hd ) );
-				skin.add( ellipsoid( pX * 0.015, - 0.091, - 0.002, 0.010, 0.013, 0.026, 10, 8 ), bind[ hd ], W( hd ) );
-				skin.add( ellipsoid( pX * 0.012, - 0.042, 0.027, 0.009, 0.018, 0.009, 10, 8 ), bind[ hd ], W( hd ) );
+				skin.add( ellipsoid( pX * 0.006, - 0.074, - 0.002, 0.012, 0.021, 0.029, 12, 8 ), handM, W( hd ) );
+				skin.add( ellipsoid( pX * 0.015, - 0.091, - 0.002, 0.010, 0.013, 0.026, 10, 8 ), handM, W( hd ) );
+				skin.add( ellipsoid( pX * 0.012, - 0.042, 0.027, 0.009, 0.018, 0.009, 10, 8 ), handM, W( hd ) );
 			}
 		}
 
 		// ── neck
 		skin.add( ringGeometry( [
-			[ - 0.06, 0.002, 0.002, 0, 0.004 ], [ - 0.05, 0.036, 0.038, 0, 0.004 ], [ 0.0, 0.033, 0.035, 0, 0.004 ], [ 0.06, 0.031, 0.034, 0, 0.006 ],
-			[ 0.10, 0.034, 0.036, 0, 0.008 ], [ 0.13, 0.02, 0.02, 0, 0.008 ], [ 0.135, 0.002, 0.002, 0, 0.008 ],
+			[ - 0.06, 0.002, 0.002, 0, 0.004 ], [ - 0.05, 0.040, 0.041, 0, 0.004 ], [ 0.0, 0.037, 0.038, 0, 0.004 ], [ 0.06, 0.035, 0.037, 0, 0.006 ],
+			[ 0.10, 0.036, 0.038, 0, 0.008 ], [ 0.13, 0.02, 0.02, 0, 0.008 ], [ 0.135, 0.002, 0.002, 0, 0.008 ],
 		], 16 ), bind.neck, ( v ) => { const t = sstep( 0.05, 0.11, v.y ); return [ [ W( 'neck' ), 1 - t ], [ W( 'head' ), t ] ]; } );
 
 		// ── legs
@@ -575,16 +614,16 @@ export class Girl {
 				X = x * 0.077; Y = y * 0.092; Z = z * ( z < 0 ? 0.093 : 0.088 );
 			} else {
 				const t = - y;
-				X = x * 0.077 * ( 1 - 0.36 * Math.pow( t, 1.6 ) );
-				Y = y * 0.094;
+				X = x * 0.077 * ( 1 - 0.33 * Math.pow( t, 1.8 ) );
+				Y = y * 0.089;
 				Z = z > 0 ? z * 0.088 * ( 1 - 0.22 * t * t ) : z * 0.093 * ( 1 - 0.55 * t );
 				// chin point
-				if ( z > 0 ) Z += 0.006 * Math.pow( t, 3 ) * Math.exp( - x * x * 30 );
+				if ( z > 0 ) Z += 0.004 * Math.pow( t, 3 ) * Math.exp( - x * x * 30 );
 			}
 			// cheek fullness
 			X *= 1 + 0.05 * Math.exp( - Math.pow( ( Y + 0.035 ) / 0.03, 2 ) );
 			// nose
-			if ( Z > 0 ) Z += 0.0065 * Math.exp( - ( X * X ) / 0.00004 - ( ( Y + 0.036 ) * ( Y + 0.036 ) ) / 0.00012 );
+			if ( Z > 0 ) Z += 0.006 * Math.exp( - ( X * X ) / 0.00004 - ( ( Y + 0.035 ) * ( Y + 0.035 ) ) / 0.00012 );
 			P.setXYZ( i, X + HC0.x, Y + HC0.y, Z + HC0.z );
 			let u = 0.5 + X / FACE_M, v = 0.5 + ( Y - FACE_Y0 ) / FACE_M;
 			if ( Z < 0.01 ) { u = X >= 0 ? 0.995 : 0.005; }
@@ -608,7 +647,7 @@ export class Girl {
 			HC0.z + CAP_R0.z * scale * Math.sin( th ) * Math.cos( ph ) );
 		// cap
 		{
-			const NP = 44, NT = 16;
+			const NP = 64, NT = 22;
 			const keys = [ [ 0, 1.0 ], [ 0.33, 1.3 ], [ 0.5, 1.95 ], [ 0.75, 2.15 ], [ 1, 2.22 ] ];
 			const thMax = ( ph ) => {
 				let a = Math.abs( ( ( ph + Math.PI ) % TAU + TAU ) % TAU - Math.PI ) / Math.PI;
@@ -636,7 +675,7 @@ export class Girl {
 			g.setIndex( idx ); g.computeVertexNormals();
 			{ const N = g.attributes.normal, pp = g.attributes.position; let sc = 0;
 				for ( let k = 0; k < pp.count; k ++ ) sc += ( pp.getY( k ) - HC0.y ) * N.getY( k ) + ( pp.getZ( k ) - HC0.z ) * N.getZ( k ) + pp.getX( k ) * N.getX( k );
-				if ( sc < 0 ) { const I = g.index.array; for ( let k = 0; k < I.length; k += 3 ) { const t = I[ k + 1 ]; I[ k + 1 ] = I[ k + 2 ]; I[ k + 2 ] = t; } g.computeVertexNormals(); console.log( 'cap flipped' ); } }
+				if ( sc < 0 ) { const I = g.index.array; for ( let k = 0; k < I.length; k += 3 ) { const t = I[ k + 1 ]; I[ k + 1 ] = I[ k + 2 ]; I[ k + 2 ] = t; } g.computeVertexNormals(); } }
 			geos.push( g );
 		}
 		// cards: bangs (front) + side curtains
@@ -712,9 +751,9 @@ export class Girl {
 		for ( let r = 0; r < NR; r ++ ) {
 			const t = r / ( NR - 1 );
 			const y = lerp( 0.075, - 0.235, t );
-			const te = Math.pow( t, 0.9 );
-			const rx = lerp( 0.128, 0.198, te ), rz = lerp( 0.104, 0.172, te );
-			const depth = 0.011 * sstep( 0.08, 1, t );
+			const te = Math.pow( t, 1.45 );
+			const rx = lerp( 0.126, 0.20, te ), rz = lerp( 0.102, 0.174, te );
+			const depth = 0.011 * sstep( 0.4, 1, t );
 			for ( let c = 0; c < NC; c ++ ) {
 				const ph = c / NC * TAU;
 				const nx = Math.sin( ph ), nz = Math.cos( ph );
@@ -819,7 +858,7 @@ export class Girl {
 		bead.instanceMatrix.setUsage( THREE.DynamicDrawUsage );
 		const r = mulberry( 4242 );
 		const beads = [];
-		for ( let i = 0; i < NBD; i ++ ) beads.push( { k: Math.floor( r() * nR ), t: 0.1 + 0.8 * r(), s: 0.12 + 0.83 * Math.sqrt( r() ), rad: 0.0028 + 0.0035 * r() * r() + 0.001 } );
+		for ( let i = 0; i < NBD; i ++ ) beads.push( { k: Math.floor( r() * nR ), t: 0.1 + 0.8 * r(), s: 0.12 + 0.83 * Math.sqrt( r() ), rad: 0.0022 + 0.003 * r() * r() } );
 		g.add( bead );
 
 		this.umb = {
@@ -947,7 +986,7 @@ export class Girl {
 	_buildStrands() {
 		const r = mulberry( 2024 );
 		const defs = [];
-		const NBACK = 56;
+		const NBACK = 76;
 		for ( let i = 0; i < NBACK; i ++ ) {
 			const layer = i % 2;
 			const f = ( i + 0.5 ) / NBACK;
@@ -956,19 +995,20 @@ export class Girl {
 			const th = layer ? lerp( 1.25, 1.6, r() ) : lerp( 0.45, 0.85, r() );
 			defs.push( {
 				ph, th, len: 0.52 + 0.1 * back + ( r() - 0.5 ) * 0.04 + ( layer ? - 0.03 : 0.04 ),
-				width: 0.031 + r() * 0.007, margin: 0.003 + layer * 0.0045 + r() * 0.003, front: false, exit: lerp( 1.9, 2.15, back ),
+				width: 0.042 + r() * 0.01, margin: 0.003 + layer * 0.0045 + r() * 0.003, front: false, exit: lerp( 1.9, 2.15, back ),
 			} );
 		}
 		for ( const s of [ - 1, 1 ] ) for ( let j = 0; j < 2; j ++ ) {
 			defs.push( { ph: s * ( 1.08 + 0.2 * j ), th: 1.1 + 0.12 * j, len: 0.32 - 0.04 * j, width: 0.024, margin: 0.012 + 0.004 * j, front: true, exit: 1.75 } );
 		}
 		const NPT = 10;
-		const S = this.hair = { defs, NPT, n: defs.length };
+		const S = this.hair = { defs, NPT, n: defs.length, nBack: NBACK };
 		const total = S.n * NPT;
 		S.pos = new Float32Array( total * 3 );
 		S.vel = new Float32Array( total * 3 );
 		S.rest = new Float32Array( total * 3 ); // head-local rest
 		S.corr = new Float32Array( total * 3 );
+		S.prev = new Float32Array( total * 3 );
 		S.anchorPrev = new Float32Array( S.n * 3 );
 		S.segLen = new Float32Array( S.n );
 
@@ -985,7 +1025,7 @@ export class Girl {
 				HC.z + ( CAP_R.z + d.margin ) * Math.sin( th ) * Math.cos( d.ph ) );
 			onCap( th, p ); path.push( p.clone() );
 			while ( th < d.exit ) { th += 0.02; onCap( th, p ); path.push( p.clone() ); }
-			const dir = new THREE.Vector3( Math.sin( d.ph ) * 0.1, - 1, Math.cos( d.ph ) * 0.1 - 0.25 - 0.3 * Math.abs( Math.sin( d.ph ) ) ).normalize();
+			const dir = new THREE.Vector3( Math.sin( d.ph ) * 0.32, - 1, Math.cos( d.ph ) * 0.1 - 0.25 - 0.3 * Math.abs( Math.sin( d.ph ) ) ).normalize();
 			if ( d.front ) dir.set( Math.sin( d.ph ) * 0.15, - 1, 0.3 ).normalize();
 			for ( let k = 0; k < 200; k ++ ) path.push( p.addScaledVector( dir, 0.01 ).clone() );
 			// resample by arc length
@@ -1056,7 +1096,7 @@ export class Girl {
 		for ( let i = 0; i < S.n * S.NPT; i ++ ) {
 			_v0.fromArray( S.rest, i * 3 ).applyMatrix4( hm );
 			_v0.toArray( S.pos, i * 3 );
-			S.vel[ i * 3 ] = S.vel[ i * 3 + 1 ] = S.vel[ i * 3 + 2 ] = 0;
+			_v0.toArray( S.prev, i * 3 );
 		}
 		for ( let si = 0; si < S.n; si ++ ) {
 			_v0.fromArray( S.rest, si * S.NPT * 3 ).applyMatrix4( hm ).toArray( S.anchorPrev, si * 3 );
@@ -1178,7 +1218,7 @@ export class Girl {
 			const x = sx * width;
 			const zA = zc + S * duty * 0.5, zB = zc - S * duty * 0.5;
 			const ank = this._ankle[ side ];
-			let phi, inStance;
+			let phi, inStance, plantW = 1;
 			if ( p < duty ) {
 				const sp = p / duty;
 				const zg = lerp( zA, zB, sp );
@@ -1198,6 +1238,7 @@ export class Girl {
 				ank.set( x * ( 1 - 0.1 * Math.sin( Math.PI * sw ) ), lerp( A0.y, A1.y, sstep( 0.1, 0.95, sw ) ) + lift * moveW * bump, lerp( A0.z, A1.z, hz ) );
 				phi = lerp( - toe, heel, sstep( 0.3, 0.92, sw ) ) - runB * 0.35 * Math.sin( Math.PI * sw ) * ( 1 - sw );
 				inStance = false;
+				plantW = sstep( 0.75, 1.0, sw );
 			}
 			// idle blend
 			const idleZ = side === 'L' ? 0.03 : - 0.03, idleX = side === 'L' ? 0.088 : - 0.082;
@@ -1209,7 +1250,7 @@ export class Girl {
 			}
 			const toeOut = lerp( 0.04 * sx, ( side === 'L' ? 0.14 : - 0.2 ), idleW );
 			this._footQ[ side ].copy( eulerQ( _q0, - phi, toeOut, 0 ) );
-			stanceW[ side ] = inStance ? 1 : 0;
+			stanceW[ side ] = plantW;
 			// footsteps
 			if ( inStance && ! this._stance[ side ] && v > 0.3 && dt > 0 ) {
 				const gpt = this._groundPt[ side ];
@@ -1292,8 +1333,8 @@ export class Girl {
 		const elbow = gp( 'elbow', v ), elbowVar = gp( 'elbowVar', v );
 		const cyc = Math.cos( TAU * ( P - 0.04 ) );
 		const flexL = armBase - armSwing * cyc - pitchSum * 0.6 * ( 1 - runB * 0.5 ) + 0.03 * idleW * Math.sin( T * 0.9 );
-		const abdL = 0.16 + 0.05 * runB + 0.02 * breath * idleW;
-		const crossL = Math.max( 0, flexL ) * 0.35 * runB;
+		const abdL = 0.11 + 0.06 * runB + 0.02 * breath * idleW;
+		const crossL = Math.max( 0, flexL ) * 0.2 * runB;
 		_q0.setFromAxisAngle( _v0.set( 1, 0, 0 ), - flexL );
 		_q1.setFromAxisAngle( _v0.set( 0, 0, 1 ), abdL );
 		_q2.setFromAxisAngle( _v0.set( 0, 1, 0 ), - crossL );
@@ -1303,13 +1344,13 @@ export class Girl {
 		eulerQ( B.handL.quaternion, - 0.12 - 0.1 * runB, 0, - 0.05 );
 
 		// ── right arm closed FK (carrying)
-		const flexR = 0.6 * armSwing * cyc * 0.55 - pitchSum * 0.5 + 0.02;
+		const flexR = 0.6 * armSwing * cyc * 0.55 - pitchSum * 0.5 - 0.06;
 		const qcU = new THREE.Quaternion(), qcF = new THREE.Quaternion(), qcH = new THREE.Quaternion();
 		_q0.setFromAxisAngle( _v0.set( 1, 0, 0 ), - flexR );
-		_q1.setFromAxisAngle( _v0.set( 0, 0, 1 ), - 0.2 - 0.04 * runB );
+		_q1.setFromAxisAngle( _v0.set( 0, 0, 1 ), - 0.15 - 0.04 * runB );
 		qcU.copy( _q1 ).multiply( _q0 );
-		eulerQ( qcF, - ( 0.55 + 0.4 * runB ), 0, 0 );
-		eulerQ( qcH, 0.42 - 0.2 * runB, 0, 0.05 );
+		eulerQ( qcF, - ( 0.62 + 0.4 * runB ), 0, 0 );
+		eulerQ( qcH, 0.62 - 0.2 * runB, 0, 0.05 );
 		B.upperArmR.quaternion.copy( qcU ); B.foreArmR.quaternion.copy( qcF ); B.handR.quaternion.copy( qcH );
 
 		this.root.updateMatrixWorld( true );
@@ -1338,7 +1379,7 @@ export class Girl {
 		const chestQ = _q0.clone();
 		const grip = new THREE.Vector3( - 0.085, 0.05 + 0.01 * runB, 0.235 + 0.012 * v ).applyMatrix4( B.chest.matrixWorld );
 		grip.addScaledVector( _v0.set( 0, 1, 0 ), - bob * 0.55 - 0.015 * breath * idleW );
-		const tilt = - 0.1 + 0.07 * v + accLean * 0.6;
+		const tilt = - 0.1 + 0.085 * v + accLean * 0.6;
 		const uDir = new THREE.Vector3( 0, 1, 0 );
 		eulerQ( _q1, tilt, 0, - 0.07 - tLean * 0.4 );
 		uDir.applyQuaternion( _q1 ).applyQuaternion( rootQ );
@@ -1489,11 +1530,13 @@ export class Girl {
 		const C = this._colliders || ( this._colliders = {
 			head: { M: new THREE.Matrix4(), Mi: new THREE.Matrix4(), r: 0.095 },
 			torso: { M: new THREE.Matrix4(), Mi: new THREE.Matrix4(), r: 0.2 },
+			torso2: { M: new THREE.Matrix4(), Mi: new THREE.Matrix4(), r: 0.2 },
 			hood: { M: new THREE.Matrix4(), Mi: new THREE.Matrix4(), r: 0.08 },
 			caps: [ 0, 1, 2, 3, 4, 5, 6, 7 ].map( () => ( { a: new THREE.Vector3(), b: new THREE.Vector3(), r: 0.05 } ) ),
 		} );
 		C.head.M.copy( hm ).multiply( _m0.makeScale( CAP_R.x, CAP_R.y, CAP_R.z ).setPosition( HC ) ); C.head.Mi.copy( C.head.M ).invert();
-		C.torso.M.copy( B.chest.matrixWorld ).multiply( _m0.makeScale( 0.178, 0.30, 0.158 ).setPosition( 0, - 0.12, - 0.016 ) ); C.torso.Mi.copy( C.torso.M ).invert();
+		C.torso.M.copy( B.chest.matrixWorld ).multiply( _m0.makeScale( 0.125, 0.30, 0.155 ).setPosition( 0.055, - 0.12, - 0.016 ) ); C.torso.Mi.copy( C.torso.M ).invert();
+		C.torso2.M.copy( B.chest.matrixWorld ).multiply( _m0.makeScale( 0.125, 0.30, 0.155 ).setPosition( - 0.055, - 0.12, - 0.016 ) ); C.torso2.Mi.copy( C.torso2.M ).invert();
 				const caps = C.caps;
 		worldP( B.neck, caps[ 0 ].a ); worldP( B.head, caps[ 0 ].b ); caps[ 0 ].r = 0.045;
 		worldP( B.upperArmL, caps[ 1 ].a ); worldP( B.upperArmR, caps[ 1 ].b ); caps[ 1 ].r = 0.072;
@@ -1512,7 +1555,7 @@ export class Girl {
 		if ( dt > 0 && ! this._teleport ) hv.subVectors( _v0, this._headPrevP ).divideScalar( dt );
 		this._headPrevP.copy( _v0 );
 
-		const nSub = dt > 0 ? Math.min( 4, Math.max( 1, Math.ceil( dt / ( 1 / 110 ) ) ) ) : 0;
+		const nSub = dt > 0 ? Math.min( 4, Math.max( 1, Math.ceil( dt / ( 1 / 100 ) ) ) ) : 0;
 		const h = nSub ? dt / nSub : 0;
 		const anchorsNow = this._anchorsNow || ( this._anchorsNow = new Float32Array( S.n * 3 ) );
 		for ( let si = 0; si < S.n; si ++ ) _v2.fromArray( rest, si * NPT * 3 ).applyMatrix4( hm ).toArray( anchorsNow, si * 3 );
@@ -1521,76 +1564,107 @@ export class Girl {
 		if ( this._comb ) wind.add( _v2.set( 0, 2, - 9 ).applyQuaternion( this._rootQ ) );
 		const p = _v4, q = _v5, goal = _v6;
 
-		const collide = ( i, margin ) => {
-			p.fromArray( pos, i * 3 );
-			// ellipsoids
-			for ( const E of [ C.head, C.torso ] ) {
-				q.copy( p ).applyMatrix4( E.Mi );
-				const s = 1 + margin / ( E === C.head ? 0.095 : ( E === C.torso ? 0.2 : 0.09 ) );
-				const l = q.length();
-				if ( l < s && l > 1e-6 ) { q.multiplyScalar( s / l ).applyMatrix4( E.M ); p.copy( q ); }
+		const ells = [ C.head, C.torso, C.torso2 ];
+		for ( const E of ells ) { E.inv = E === C.head ? 1 / 0.1 : 1 / 0.15; }
+		for ( const c of caps ) {
+			c.ab = c.ab || new THREE.Vector3(); c.ab.subVectors( c.b, c.a ); c.abl2 = Math.max( 1e-8, c.ab.lengthSq() );
+			c.mx = ( c.a.x + c.b.x ) * 0.5; c.my = ( c.a.y + c.b.y ) * 0.5; c.mz = ( c.a.z + c.b.z ) * 0.5;
+			c.br = Math.sqrt( c.abl2 ) * 0.5 + c.r + 0.03; c.br2 = c.br * c.br;
+		}
+		const collide = ( i, margin, kIdx ) => {
+			const i3 = i * 3;
+			let px = pos[ i3 ], py = pos[ i3 + 1 ], pz = pos[ i3 + 2 ];
+			for ( let e = kIdx < 6 ? 0 : 1; e < 3; e ++ ) {
+				const E = ells[ e ];
+				const m = E.Mi.elements;
+				const qx = m[ 0 ] * px + m[ 4 ] * py + m[ 8 ] * pz + m[ 12 ];
+				const qy = m[ 1 ] * px + m[ 5 ] * py + m[ 9 ] * pz + m[ 13 ];
+				const qz = m[ 2 ] * px + m[ 6 ] * py + m[ 10 ] * pz + m[ 14 ];
+				const s = 1 + margin * E.inv;
+				const l2 = qx * qx + qy * qy + qz * qz;
+				if ( l2 < s * s && l2 > 1e-12 ) {
+					const k = s / Math.sqrt( l2 );
+					const ux = qx * k, uy = qy * k, uz = qz * k;
+					const M = E.M.elements;
+					px = M[ 0 ] * ux + M[ 4 ] * uy + M[ 8 ] * uz + M[ 12 ];
+					py = M[ 1 ] * ux + M[ 5 ] * uy + M[ 9 ] * uz + M[ 13 ];
+					pz = M[ 2 ] * ux + M[ 6 ] * uy + M[ 10 ] * uz + M[ 14 ];
+				}
 			}
-			for ( const c of caps ) {
-				const ab = _v0.subVectors( c.b, c.a );
-				const t = clamp( _v2.subVectors( p, c.a ).dot( ab ) / Math.max( 1e-8, ab.lengthSq() ), 0, 1 );
-				_v2.copy( c.a ).addScaledVector( ab, t );
-				q.subVectors( p, _v2 );
-				const l = q.length(), R = c.r + margin;
-				if ( l < R ) { if ( l > 1e-6 ) p.copy( _v2 ).addScaledVector( q, R / l ); }
+			for ( let ci = 0; ci < caps.length; ci ++ ) {
+				const c = caps[ ci ];
+				const dxm = px - c.mx, dym = py - c.my, dzm = pz - c.mz;
+				if ( dxm * dxm + dym * dym + dzm * dzm > c.br2 ) continue;
+				const ax = px - c.a.x, ay = py - c.a.y, az = pz - c.a.z;
+				let t = ( ax * c.ab.x + ay * c.ab.y + az * c.ab.z ) / c.abl2;
+				t = t < 0 ? 0 : ( t > 1 ? 1 : t );
+				const cx = c.a.x + c.ab.x * t, cy = c.a.y + c.ab.y * t, cz = c.a.z + c.ab.z * t;
+				const qx = px - cx, qy = py - cy, qz = pz - cz;
+				const l2 = qx * qx + qy * qy + qz * qz, R = c.r + margin;
+				if ( l2 < R * R && l2 > 1e-12 ) { const k = R / Math.sqrt( l2 ); px = cx + qx * k; py = cy + qy * k; pz = cz + qz * k; }
 			}
-			p.toArray( pos, i * 3 );
+			pos[ i3 ] = px; pos[ i3 + 1 ] = py; pos[ i3 + 2 ] = pz;
 		};
 
+		const prv = S.prev;
+		const hvh = _v1.multiplyScalar( h ); // head displacement per substep
+		const air = 1.5 * h, intD = 2.5 * h, g2 = 9.8 * h * h;
 		for ( let sub = 0; sub < nSub; sub ++ ) {
 			const f = ( sub + 1 ) / nSub;
 			for ( let si = 0; si < S.n; si ++ ) {
 				const d = S.defs[ si ];
 				const base = si * NPT;
 				const L = S.segLen[ si ];
-				// root anchor
 				_v2.fromArray( S.anchorPrev, si * 3 ).lerp( _v0.fromArray( anchorsNow, si * 3 ), f );
-				const old = this._oldPos || ( this._oldPos = new Float32Array( NPT * 3 ) );
-				for ( let k = 0; k < NPT; k ++ ) { old[ k * 3 ] = pos[ ( base + k ) * 3 ]; old[ k * 3 + 1 ] = pos[ ( base + k ) * 3 + 1 ]; old[ k * 3 + 2 ] = pos[ ( base + k ) * 3 + 2 ]; }
-				pos[ base * 3 ] = _v2.x; pos[ base * 3 + 1 ] = _v2.y; pos[ base * 3 + 2 ] = _v2.z;
-				// integrate
+				pos[ base * 3 ] = prv[ base * 3 ] = _v2.x; pos[ base * 3 + 1 ] = prv[ base * 3 + 1 ] = _v2.y; pos[ base * 3 + 2 ] = prv[ base * 3 + 2 ] = _v2.z;
 				for ( let k = 1; k < NPT; k ++ ) {
 					const i3 = ( base + k ) * 3;
-					let vx = vel[ i3 ], vy = vel[ i3 + 1 ], vz = vel[ i3 + 2 ];
-					// air drag + internal damping relative to head
-					const air = 0.9 * h, intD = 3.2 * h;
-					vx -= vx * air + ( vx - hv.x ) * intD; vy -= vy * air + ( vy - hv.y ) * intD; vz -= vz * air + ( vz - hv.z ) * intD;
-					vy -= 9.8 * h;
-					vx += wind.x * h * ( k / NPT ); vz += wind.z * h * ( k / NPT );
-					vel[ i3 ] = vx; vel[ i3 + 1 ] = vy; vel[ i3 + 2 ] = vz;
-					pos[ i3 ] += vx * h; pos[ i3 + 1 ] += vy * h; pos[ i3 + 2 ] += vz * h;
-					// shape goal
-					const gk = goalK[ k ] * ( d.front ? 0.6 : 1 );
+					const wk = k / NPT;
+					for ( let c = 0; c < 3; c ++ ) {
+						let vd = pos[ i3 + c ] - prv[ i3 + c ];
+						const hc = c === 0 ? hvh.x : ( c === 1 ? hvh.y : hvh.z );
+						vd -= vd * air + ( vd - hc ) * intD;
+						if ( ! Number.isFinite( vd ) ) vd = 0;
+						vd = clamp( vd, - 0.3, 0.3 );
+						prv[ i3 + c ] = pos[ i3 + c ];
+						pos[ i3 + c ] += vd;
+					}
+					pos[ i3 + 1 ] -= g2;
+					pos[ i3 ] += wind.x * h * h * wk; pos[ i3 + 2 ] += wind.z * h * h * wk; pos[ i3 + 1 ] += wind.y * h * h * wk;
+					const gk = DBG.noGoal ? ( k === 1 ? 0.85 : 0 ) : goalK[ k ] * ( d.front ? 0.6 : 1 );
 					if ( gk > 0 ) {
 						goal.fromArray( rest, i3 ).applyMatrix4( hm );
 						pos[ i3 ] += ( goal.x - pos[ i3 ] ) * gk; pos[ i3 + 1 ] += ( goal.y - pos[ i3 + 1 ] ) * gk; pos[ i3 + 2 ] += ( goal.z - pos[ i3 + 2 ] ) * gk;
 					}
 				}
-				// FTL + collide (2 passes)
-				for ( let pass = 0; pass < 2; pass ++ ) {
+				// Jakobsen relaxation + collisions
+				for ( let it = 0; it < 2; it ++ ) {
 					for ( let k = 1; k < NPT; k ++ ) {
 						const i3 = ( base + k ) * 3, j3 = ( base + k - 1 ) * 3;
-						let dx = pos[ i3 ] - pos[ j3 ], dy = pos[ i3 + 1 ] - pos[ j3 + 1 ], dz = pos[ i3 + 2 ] - pos[ j3 + 2 ];
+						const dx = pos[ i3 ] - pos[ j3 ], dy = pos[ i3 + 1 ] - pos[ j3 + 1 ], dz = pos[ i3 + 2 ] - pos[ j3 + 2 ];
 						const l = Math.sqrt( dx * dx + dy * dy + dz * dz ) || 1e-6;
-						const s = L / l;
-						const nx = pos[ j3 ] + dx * s, ny = pos[ j3 + 1 ] + dy * s, nz = pos[ j3 + 2 ] + dz * s;
-						if ( pass === 1 ) { corr[ i3 ] = nx - pos[ i3 ]; corr[ i3 + 1 ] = ny - pos[ i3 + 1 ]; corr[ i3 + 2 ] = nz - pos[ i3 + 2 ]; }
-						pos[ i3 ] = nx; pos[ i3 + 1 ] = ny; pos[ i3 + 2 ] = nz;
-						if ( k >= 2 || pass === 1 ) collide( base + k, d.margin );
+						const diff = ( l - L ) / l;
+						if ( k === 1 ) { pos[ i3 ] -= dx * diff; pos[ i3 + 1 ] -= dy * diff; pos[ i3 + 2 ] -= dz * diff; }
+						else {
+							const hd = diff * 0.5;
+							pos[ i3 ] -= dx * hd; pos[ i3 + 1 ] -= dy * hd; pos[ i3 + 2 ] -= dz * hd;
+							pos[ j3 ] += dx * hd; pos[ j3 + 1 ] += dy * hd; pos[ j3 + 2 ] += dz * hd;
+						}
 					}
+					if ( ! DBG.noCol ) for ( let k = 2; k < NPT; k ++ ) collide( base + k, d.margin, k );
 				}
-				// velocity update (DFTL)
-				for ( let k = 1; k < NPT; k ++ ) {
-					const i3 = ( base + k ) * 3;
-					const n3 = k + 1 < NPT ? ( base + k + 1 ) * 3 : - 1;
-					for ( let c = 0; c < 3; c ++ ) {
-						let nv = ( pos[ i3 + c ] - old[ k * 3 + c ] ) / h;
-						if ( n3 >= 0 ) nv -= 0.85 * corr[ n3 + c ] / h;
-						vel[ i3 + c ] = Number.isFinite( nv ) ? clamp( nv, - 30, 30 ) : 0;
+			}
+			// neighbour spacing: keeps the back hair a continuous sheet instead of clumps
+			for ( let si = 0; si + 1 < S.nBack && ! DBG.noSpace; si ++ ) {
+				for ( let k = 2; k < NPT; k ++ ) {
+					const a3 = ( si * NPT + k ) * 3, b3 = ( ( si + 1 ) * NPT + k ) * 3;
+					const dx = pos[ b3 ] - pos[ a3 ], dy = pos[ b3 + 1 ] - pos[ a3 + 1 ], dz = pos[ b3 + 2 ] - pos[ a3 + 2 ];
+					const l = Math.sqrt( dx * dx + dy * dy + dz * dz );
+					const dmin = 0.004 + 0.007 * k / NPT;
+					if ( l < dmin && l > 1e-7 ) {
+						const f = ( dmin - l ) / l * 0.5;
+						pos[ a3 ] -= dx * f; pos[ a3 + 1 ] -= dy * f; pos[ a3 + 2 ] -= dz * f;
+						pos[ b3 ] += dx * f; pos[ b3 + 1 ] += dy * f; pos[ b3 + 2 ] += dz * f;
 					}
 				}
 			}
@@ -1637,8 +1711,8 @@ export class Girl {
 				side.normalize();
 				outV.crossVectors( side, tan ).normalize();
 				const u = k / ( M - 1 );
-				const w = d.width * ( 1 - 0.82 * Math.pow( u, 2.2 ) ) * ( 0.85 + 0.15 * Math.sin( u * 4 + si ) ) * 0.5;
-				const bul = w * 0.35;
+				const w = d.width * ( 1 - 0.75 * Math.pow( u, 3 ) ) * ( 0.88 + 0.12 * Math.sin( u * 4 + si ) ) * 0.5 * ( k === M - 1 ? 0.35 : 1 );
+				const bul = w * 0.16;
 				const vb = ( si * M + k ) * 9;
 				for ( let c = 0; c < 3; c ++ ) {
 					const sx = c === 0 ? - 1 : ( c === 2 ? 1 : 0 );
@@ -1646,7 +1720,7 @@ export class Girl {
 					if ( c === 1 ) _v4.addScaledVector( outV, bul );
 					_v4.applyMatrix4( ip );
 					out[ vb + c * 3 ] = _v4.x; out[ vb + c * 3 + 1 ] = _v4.y; out[ vb + c * 3 + 2 ] = _v4.z;
-					_v5.copy( outV ).addScaledVector( side, sx * 0.55 ).normalize().transformDirection( ip );
+					_v5.copy( outV ).addScaledVector( side, sx * 0.3 ).normalize().transformDirection( ip );
 					nor[ vb + c * 3 ] = _v5.x; nor[ vb + c * 3 + 1 ] = _v5.y; nor[ vb + c * 3 + 2 ] = _v5.z;
 				}
 			}
@@ -1691,7 +1765,7 @@ export class Girl {
 		const flare = 0.02 * runB + 0.004 * sstep( 0.2, 1.5, v );
 		for ( let r = 0; r < NR; r ++ ) {
 			const t = r / ( NR - 1 );
-			const w = Math.pow( t, 1.5 );
+			const w = Math.pow( sstep( 0.42, 1, t ), 1.1 );
 			for ( let c = 0; c < NC; c ++ ) {
 				const ph = c / NC * TAU;
 				const nx = Math.sin( ph ), nz = Math.cos( ph );
@@ -1735,6 +1809,36 @@ export class Girl {
 							p.copy( _v4 );
 						}
 					}
+				}
+				arr[ k3 ] = p.x; arr[ k3 + 1 ] = p.y; arr[ k3 + 2 ] = p.z;
+			}
+		}
+		// smooth the collision result across columns (closes tears), then push out of the legs again
+		for ( let i = 0; i < arr.length; i ++ ) off[ i ] = arr[ i ] - base[ i ];
+		for ( let pass = 0; pass < 3; pass ++ ) {
+			tmp.set( off );
+			for ( let r = 1; r < NR; r ++ ) for ( let c = 0; c < NC; c ++ ) {
+				const k3 = ( r * NC + c ) * 3, a3 = ( r * NC + ( c + NC - 1 ) % NC ) * 3, b3 = ( r * NC + ( c + 1 ) % NC ) * 3;
+				for ( let e = 0; e < 3; e ++ ) {
+					const avg = tmp[ a3 + e ] * 0.25 + tmp[ k3 + e ] * 0.5 + tmp[ b3 + e ] * 0.25;
+					// keep the larger outward displacement so smoothing never pulls cloth into a leg
+					off[ k3 + e ] = Math.abs( avg ) > Math.abs( tmp[ k3 + e ] ) * 0.6 ? avg : tmp[ k3 + e ] * 0.6 + avg * 0.4;
+				}
+			}
+		}
+		for ( let r = 1; r < NR; r ++ ) {
+			const t = r / ( NR - 1 );
+			for ( let c = 0; c < NC; c ++ ) {
+				const k3 = ( r * NC + c ) * 3;
+				p.set( base[ k3 ] + off[ k3 ], base[ k3 + 1 ] + off[ k3 + 1 ], base[ k3 + 2 ] + off[ k3 + 2 ] );
+				if ( t > 0.12 ) for ( const L of legs ) {
+					const ab = dv.subVectors( L.b, L.a );
+					const tt = clamp( _v3.subVectors( p, L.a ).dot( ab ) / ab.lengthSq(), 0, 1 );
+					cpt.copy( L.a ).addScaledVector( ab, tt );
+					const R = lerp( 0.084, 0.062, tt ) + 0.006;
+					_v3.subVectors( p, cpt );
+					const l = _v3.length();
+					if ( l < R && l > 1e-6 ) p.copy( cpt ).addScaledVector( _v3, R / l );
 				}
 				arr[ k3 ] = p.x; arr[ k3 + 1 ] = p.y; arr[ k3 + 2 ] = p.z;
 			}

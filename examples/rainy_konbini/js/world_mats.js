@@ -21,7 +21,7 @@ export function makeMaterials( T ) {
 	M.rubber = std( 'rubber', { roughness: 0.38, metalness: 0.0 }, { cast: true } );
 	M.concrete = std( 'concrete', { roughness: 0.35, metalness: 0.0 }, { cast: true } );
 	M.paint = std( 'roadPaint', { roughness: 0.3, metalness: 0.0, polygonOffset: true, polygonOffsetFactor: - 2, polygonOffsetUnits: - 2 } );
-	M.asphalt = new THREE.MeshStandardMaterial( { name: 'asphalt', map: T.asphalt, color: 0x9a9ca0, roughness: 0.32, metalness: 0 } );
+	M.asphalt = new THREE.MeshStandardMaterial( { name: 'asphalt', map: T.asphalt, color: 0x76787c, roughness: 0.3, metalness: 0 } );
 	M.sidewalk = new THREE.MeshStandardMaterial( { name: 'sidewalk', map: T.sidewalk, color: 0xa6a8ab, roughness: 0.3, metalness: 0 } );
 	M.tactile = new THREE.MeshStandardMaterial( { name: 'tactile', map: T.tactile, color: 0xb8b0a0, roughness: 0.3, metalness: 0, polygonOffset: true, polygonOffsetFactor: - 1 } );
 	M.siding = new THREE.MeshStandardMaterial( { name: 'siding', map: T.siding, roughness: 0.45, metalness: 0, vertexColors: true } );
@@ -31,12 +31,12 @@ export function makeMaterials( T ) {
 
 	// ---- emissive (MeshBasic: values >1 in vertex colour / colour drive bloom) ----
 	M.emit = new THREE.MeshBasicMaterial( { name: 'emit', vertexColors: true } );
-	M.emitTex = new THREE.MeshBasicMaterial( { name: 'emitTex', map: T.emis, color: new THREE.Color( 1.6, 1.6, 1.6 ), vertexColors: true } );
+	M.emitTex = new THREE.MeshBasicMaterial( { name: 'emitTex', map: T.emis, color: 0xffffff, vertexColors: true } );
 	M.decal = new THREE.MeshStandardMaterial( { name: 'decal', map: T.decal, transparent: true, alphaTest: 0.05, roughness: 0.35, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: - 2, polygonOffsetUnits: - 2 } );
 	M.decalLit = new THREE.MeshBasicMaterial( { name: 'decalLit', map: T.decal, transparent: true, alphaTest: 0.05, color: new THREE.Color( 0.95, 0.95, 0.95 ), depthWrite: false, polygonOffset: true, polygonOffsetFactor: - 2, polygonOffsetUnits: - 2 } );
 	M.paintDecal = new THREE.MeshStandardMaterial( { name: 'paintDecal', map: T.decal, transparent: true, alphaTest: 0.1, roughness: 0.3, depthWrite: false, polygonOffset: true, polygonOffsetFactor: - 3, polygonOffsetUnits: - 3 } );
 	M.signBand = new THREE.MeshBasicMaterial( { name: 'signBand', map: T.signBand, color: new THREE.Color( 1.75, 1.75, 1.75 ) } );
-	M.signLogo = new THREE.MeshBasicMaterial( { name: 'signLogo', map: T.signLogo, color: new THREE.Color( 1.8, 1.8, 1.8 ) } );
+	M.signLogo = new THREE.MeshBasicMaterial( { name: 'signLogo', map: T.signLogo, color: new THREE.Color( 1.6, 1.6, 1.6 ) } );
 	M.sign24 = new THREE.MeshBasicMaterial( { name: 'sign24', map: T.sign24, color: new THREE.Color( 1.75, 1.75, 1.75 ) } );
 	M.pylon = new THREE.MeshBasicMaterial( { name: 'pylon', map: T.pylon, color: new THREE.Color( 1.7, 1.7, 1.7 ) } );
 	M.vend = new THREE.MeshBasicMaterial( { name: 'vend', map: T.vend, color: new THREE.Color( 1.7, 1.75, 1.85 ) } );
@@ -52,7 +52,7 @@ export function makeMaterials( T ) {
 	M.intMatte = std( 'intMatte', { roughness: 0.75, metalness: 0 } );
 	M.intGloss = std( 'intGloss', { roughness: 0.35, metalness: 0.05 } );
 	M.intMetal = std( 'intMetal', { roughness: 0.35, metalness: 0.75 } );
-	M.floor = new THREE.MeshStandardMaterial( { name: 'floor', map: T.floor, roughness: 0.16, metalness: 0 } );
+	M.floor = new THREE.MeshStandardMaterial( { name: 'floor', map: T.floor, roughness: 0.22, metalness: 0 } );
 	M.mags = new THREE.MeshStandardMaterial( { name: 'mags', map: T.mags, roughness: 0.4 } );
 	M.cig = new THREE.MeshStandardMaterial( { name: 'cig', map: T.cig, emissiveMap: T.cig, emissive: 0xffffff, emissiveIntensity: 0.35, roughness: 0.4 } );
 	M.prod = new THREE.MeshStandardMaterial( { name: 'prod', map: T.prod, roughness: 0.38, metalness: 0 } );

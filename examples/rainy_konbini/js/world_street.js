@@ -47,8 +47,8 @@ export function buildStreet( ctx, shadowSize ) {
 	bx( MAT.concrete, 0x8a8b88, 1.2, 4.8, 0, 0.125, 11.6, 11.86 );
 	ctx.outdoorGround.push(
 		{ minX: - 18, maxX: 20, minZ: 0, maxZ: 8.7, y: 0 },
-		{ minX: 8, maxX: 20, minZ: - 12, maxZ: 0, y: 0 },
-		{ minX: - 18, maxX: - 8, minZ: - 12, maxZ: 0, y: 0 },
+		{ minX: 8, maxX: 12.5, minZ: - 12, maxZ: 0, y: 0 },
+		{ minX: - 9.2, maxX: - 8, minZ: - 12, maxZ: 0, y: 0 },
 		{ minX: - 45, maxX: 45, minZ: 9, maxZ: 11.85, y: 0.12 },
 		{ minX: - 45, maxX: 45, minZ: 12, maxZ: 22, y: 0 },
 		{ minX: - 45, maxX: 45, minZ: 22.15, maxZ: 25.5, y: 0.12 },
@@ -284,7 +284,7 @@ export function buildStreet( ctx, shadowSize ) {
 	// ================= bus stop (far sidewalk) =================
 	{
 
-		const x = - 2.2, z = 23.0;
+		const x = - 9.0, z = 23.0;
 		cyl( MAT.concrete, 0x7a7c7e, 0.28, 0.3, 0.14, 16, x, 0.19, z );
 		cyl( MAT.extPaint, 0xdedede, 0.035, 0.035, 2.4, 8, x, 1.4, z );
 		B.add( quadGeo( 0.62, 0.62, D.busstop ), MAT.decal, M( x, 2.35, z - 0.012, 0, Math.PI, 0 ) );
@@ -348,7 +348,15 @@ export function buildStreet( ctx, shadowSize ) {
 			const cx = x0 + 1.5 + u * 2.95, y = 0.25 + fl * 3.0;
 			const lit = warmWin[ fl * 4 + u ];
 			bx( MAT.metal, 0x6a6e73, cx - 0.95, cx + 0.95, y, y + 2.0, z1, z1 + 0.05 );
-			if ( lit ) B.add( new THREE.PlaneGeometry( 1.8, 1.9 ), MAT.emit, M( cx, y + 1.0, z1 + 0.055 ), new THREE.Color( 1.6, 1.0 + R() * 0.2, 0.55 ) );
+			if ( lit ) {
+
+				B.add( new THREE.PlaneGeometry( 1.8, 1.9 ), MAT.emit, M( cx, y + 1.0, z1 + 0.055 ), new THREE.Color( 1.5, 0.78 + R() * 0.15, 0.36 ) );
+				// half-drawn curtains
+				const cw = 0.35 + R() * 0.3;
+				B.add( new THREE.PlaneGeometry( cw, 1.9 ), MAT.emit, M( cx - 0.9 + cw / 2, y + 1.0, z1 + 0.058 ), new THREE.Color( 0.55, 0.28, 0.14 ) );
+				B.add( new THREE.PlaneGeometry( 0.5, 1.9 ), MAT.emit, M( cx + 0.65, y + 1.0, z1 + 0.058 ), new THREE.Color( 0.5, 0.26, 0.13 ) );
+
+			}
 			else B.add( new THREE.PlaneGeometry( 1.8, 1.9 ), MAT.extPlastic, M( cx, y + 1.0, z1 + 0.055 ), 0x1a2028 );
 			bx( MAT.metal, 0x6a6e73, cx - 0.01, cx + 0.01, y, y + 2.0, z1 + 0.05, z1 + 0.07 );
 			if ( fl === 1 ) {
@@ -473,7 +481,7 @@ export function buildStreet( ctx, shadowSize ) {
 		B.add( quadGeo( 2.2, 1.2, D.noren ), MAT.decal, M( - 3.65, 1.95, farZ - 0.3, 0.06, Math.PI, 0 ) );
 		bx( MAT.far, 0x2a1c12, - 4.9, - 2.4, 2.55, 2.6, farZ - 0.35, farZ );
 		box( MAT.far, 0x2a1c12, 4.6, 0.9, 0.15, - 3.65, 3.1, farZ - 0.1 );
-		signFace( 'ramensign', 4.4, 0.8, - 3.65, 3.1, farZ - 0.18, Math.PI, 0.9 );
+		signFace( 'ramensign', 4.4, 0.8, - 3.65, 3.1, farZ - 0.18, Math.PI, 1.3 );
 		// lanterns
 		for ( const lx of [ - 5.3, - 2.0 ] ) {
 
@@ -502,11 +510,11 @@ export function buildStreet( ctx, shadowSize ) {
 		const x0 = 0.6, x1 = 7.4;
 		facade( x0, x1, 7.2, 0x4a4038 );
 		bx( MAT.far, 0x2a1e16, x0 + 0.2, x1 - 0.2, 0, 2.7, farZ - 0.1, farZ );
-		B.add( new THREE.PlaneGeometry( 5.6, 2.0 ), MAT.emit, M( 4.0, 1.25, farZ - 0.11, 0, Math.PI, 0 ), new THREE.Color( 2.2, 1.45, 0.75 ) );
+		B.add( new THREE.PlaneGeometry( 5.6, 2.0 ), MAT.emit, M( 4.0, 1.25, farZ - 0.11, 0, Math.PI, 0 ), new THREE.Color( 1.45, 0.9, 0.42 ) );
 		for ( let i = 0; i <= 8; i ++ ) bx( MAT.far, 0x2a1a10, 1.2 + i * 0.7 - 0.02, 1.2 + i * 0.7 + 0.02, 0.25, 2.25, farZ - 0.14, farZ - 0.11 );
 		for ( let j = 0; j <= 4; j ++ ) bx( MAT.far, 0x2a1a10, 1.2, 6.8, 0.25 + j * 0.5 - 0.015, 0.25 + j * 0.5 + 0.015, farZ - 0.14, farZ - 0.11 );
 		box( MAT.far, 0x2a1c12, 5.6, 1.0, 0.15, 4.0, 3.3, farZ - 0.1 );
-		signFace( 'izakaya', 5.4, 0.9, 4.0, 3.3, farZ - 0.18, Math.PI, 1.5 );
+		signFace( 'izakaya', 5.4, 0.9, 4.0, 3.3, farZ - 0.18, Math.PI, 1.25 );
 		for ( const lx of [ 1.0, 7.0 ] ) {
 
 			const g = new THREE.SphereGeometry( 0.24, 16, 10 );
@@ -527,11 +535,11 @@ export function buildStreet( ctx, shadowSize ) {
 
 		const x0 = 7.8, x1 = 13.5;
 		facade( x0, x1, 5.8, 0x6a6e72 );
-		B.add( new THREE.PlaneGeometry( 4.8, 1.4 ), MAT.emit, M( 10.65, 1.9, farZ - 0.05, 0, Math.PI, 0 ), new THREE.Color( 1.1, 1.25, 1.4 ) );
+		B.add( new THREE.PlaneGeometry( 4.8, 1.4 ), MAT.emit, M( 10.65, 1.9, farZ - 0.05, 0, Math.PI, 0 ), new THREE.Color( 0.75, 0.85, 0.95 ) );
 		const sg = new THREE.PlaneGeometry( 4.8, 1.2 ); scaleUV( sg, 4.8, 1.2 );
 		B.add( sg, MAT.shutter, M( 10.65, 0.6, farZ - 0.06, 0, Math.PI, 0 ) );
 		box( MAT.far, 0x1f2c3c, 5.0, 0.8, 0.15, 10.65, 3.0, farZ - 0.1 );
-		signFace( 'cleaning', 4.8, 0.7, 10.65, 3.0, farZ - 0.18, Math.PI, 1.4 );
+		signFace( 'cleaning', 4.8, 0.7, 10.65, 3.0, farZ - 0.18, Math.PI, 1.2 );
 
 	}
 

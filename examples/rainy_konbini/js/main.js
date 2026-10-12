@@ -63,7 +63,7 @@ const sky = createSky( scene );
 const camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 0.05, 420 );
 
 // cold night ambience
-const hemi = new THREE.HemisphereLight( 0x46679e, 0x0a0d14, 0.55 );
+const hemi = new THREE.HemisphereLight( 0x46679e, 0x0a0d14, 0.12 ); // world.js owns the main ambient; this one carries lightning flashes
 scene.add( hemi );
 const moon = new THREE.DirectionalLight( 0x7d9cd6, 0.35 );
 moon.position.set( - 20, 30, 25 );
@@ -895,7 +895,7 @@ function updateWeather( dt, t ) {
 	// double flicker
 	const f = ft < 0 || ft > 0.9 ? 0 : Math.max( 0, 1 - ft * 3 ) + ( ft > 0.18 ? Math.max( 0, 0.7 - ( ft - 0.18 ) * 1.6 ) : 0 );
 	sky.material.uniforms.uFlash.value = f;
-	hemi.intensity = 0.55 + f * 1.6;
+	hemi.intensity = 0.12 + f * 1.8;
 	post.grade.uniforms.uFlash.value = f * 0.012;
 
 }
@@ -938,4 +938,5 @@ if ( params.has( 'nograde' ) ) post.grade.enabled = false;
 window.game = { state, player, cam, world, girl, keys, renderer, camera, scene, interact, hud };
 
 renderer.setAnimationLoop( frame );
-hud.ready();
+// pre-compile every material so the first gameplay frames don't hitch
+( renderer.compileAsync ? renderer.compileAsync( scene, camera ) : Promise.resolve() ).catch( () => {} ).then( () => hud.ready() );
