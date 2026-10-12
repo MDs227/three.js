@@ -14,6 +14,8 @@ npx http-server -c-1 .
 
 URL 參數：`?q=low|medium|high` 畫質、`?debug` 顯示 FPS。
 
+單檔發佈版（給沙箱環境如 claude.ai Artifact）：`./build_single.sh` → `dist/index.html`。沙箱 iframe 的來源是 `null`，分開的 module 檔需要 CORS 才能載入，所以發佈版把遊戲模組打包內嵌。
+
 ## 操作
 
 | 按鍵 | 動作 |

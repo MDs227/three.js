@@ -176,6 +176,22 @@ body.touch-ui .prompt { bottom: 190px; }
 <div id="app"></div>
 <div id="hud"></div>
 <script type="importmap">{"imports":{"three":"../../build/three.module.js","three/addons/":"../jsm/"}}</script>
+<script>
+// visible fallback when the module graph or WebGL fails, instead of a silent black screen
+( function () {
+	function show( msg ) {
+		if ( window.game || document.getElementById( 'bootError' ) ) return;
+		var d = document.createElement( 'div' );
+		d.id = 'bootError';
+		d.style.cssText = 'position:fixed;inset:0;display:grid;place-items:center;padding:16px;background:#070d18;color:#e9f0fb;font:15px/1.7 sans-serif;text-align:center;z-index:9';
+		d.innerHTML = '<div><b style="font-size:20px">雨夜のコンビニ</b><br>ゲームを読み込めませんでした　遊戲載入失敗<br><small style="opacity:.7">' + String( msg ).replace( /[<&]/g, '' ).slice( 0, 240 ) + '</small></div>';
+		document.body.appendChild( d );
+	}
+	addEventListener( 'error', function ( e ) { show( e.message || ( e.target && e.target.src ) || 'script error' ); }, true );
+	addEventListener( 'unhandledrejection', function ( e ) { show( e.reason && e.reason.message || e.reason ); } );
+	setTimeout( function () { if ( ! window.game ) show( 'timeout (WebGL / network)' ); }, 45000 );
+} )();
+</script>
 <script type="module" src="./js/main.js"></script>
 </body>
 </html>
