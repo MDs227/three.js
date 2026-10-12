@@ -122,7 +122,7 @@ export function createPost( renderer, scene, camera, { quality = 'high' } = {} )
 	} );
 	composer.addPass( clampPass );
 
-	const bloom = new UnrealBloomPass( new THREE.Vector2( size.x, size.y ), 0.42, 0.55, 1.6 );
+	const bloom = new UnrealBloomPass( new THREE.Vector2( size.x, size.y ), 0.28, 0.45, 2.4 );
 	composer.addPass( bloom );
 
 	const grade = new ShaderPass( GradeShader );

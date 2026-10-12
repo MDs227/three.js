@@ -93,6 +93,7 @@ export function buildWorld( scene, { renderer = null, quality = 'high' } = {} ) 
 		outdoorGround: ctx.outdoorGround,
 		lights: ctx.lights,
 		lightsInfo: ctx.lightsInfo,
+		clerkPosition: ctx.clerkPosition || new THREE.Vector3( 6.2, 0, - 6.55 ),
 		materials: MAT,
 		textures: T,
 		groundHeight,

@@ -163,9 +163,10 @@ export function scaleUV( g, su, sv ) {
 /** Simple shelf-packing canvas atlas. */
 export class Atlas {
 
-	constructor( size = 1024, bg = null ) {
+	constructor( size = 1024, bg = null, scale = 1 ) {
 
 		this.size = size;
+		this.scale = scale;
 		this.canvas = document.createElement( 'canvas' );
 		this.canvas.width = this.canvas.height = size;
 		this.ctx = this.canvas.getContext( '2d' );
@@ -178,36 +179,54 @@ export class Atlas {
 
 		this.x = 0; this.y = 0; this.rowH = 0; this.pad = 6;
 		this.rects = {};
+		this.items = [];
+		this.packed = false;
 
 	}
 
-	draw( key, w, h, fn ) {
+	draw( key, w0, h0, fn ) {
 
-		const S = this.size;
-		if ( this.x + w > S ) {
-
-			this.x = 0; this.y += this.rowH + this.pad; this.rowH = 0;
-
-		}
-
-		if ( this.y + h > S ) console.warn( 'atlas overflow', key );
-		const x = this.x, y = this.y;
-		this.x += w + this.pad;
-		this.rowH = Math.max( this.rowH, h );
-		const c = this.ctx;
-		c.save();
-		c.translate( x, y );
-		c.beginPath(); c.rect( 0, 0, w, h ); c.clip();
-		fn( c, w, h );
-		c.restore();
-		const r = { x, y, w, h, u0: ( x + 0.5 ) / S, u1: ( x + w - 0.5 ) / S, v0: 1 - ( y + h - 0.5 ) / S, v1: 1 - ( y + 0.5 ) / S, aspect: w / h };
+		const r = { aspect: w0 / h0 };
+		this.items.push( { key, w0, h0, fn, r } );
 		this.rects[ key ] = r;
 		return r;
 
 	}
 
+	pack() {
+
+		if ( this.packed ) return;
+		this.packed = true;
+		const S = this.size, k = this.scale, c = this.ctx;
+		const items = this.items.slice().sort( ( a, b ) => b.h0 - a.h0 );
+		for ( const it of items ) {
+
+			const w = Math.ceil( it.w0 * k ), h = Math.ceil( it.h0 * k );
+			if ( this.x + w > S ) {
+
+				this.x = 0; this.y += this.rowH + this.pad; this.rowH = 0;
+
+			}
+
+			if ( this.y + h > S ) console.warn( 'atlas overflow', it.key );
+			const x = this.x, y = this.y;
+			this.x += w + this.pad;
+			this.rowH = Math.max( this.rowH, h );
+			c.save();
+			c.translate( x, y );
+			c.beginPath(); c.rect( 0, 0, w, h ); c.clip();
+			c.scale( k, k );
+			it.fn( c, it.w0, it.h0 );
+			c.restore();
+			Object.assign( it.r, { x, y, w, h, u0: ( x + 0.5 ) / S, u1: ( x + w - 0.5 ) / S, v0: 1 - ( y + h - 0.5 ) / S, v1: 1 - ( y + 0.5 ) / S } );
+
+		}
+
+	}
+
 	texture( aniso = 4 ) {
 
+		this.pack();
 		const t = new THREE.CanvasTexture( this.canvas );
 		t.colorSpace = THREE.SRGBColorSpace;
 		t.anisotropy = aniso;

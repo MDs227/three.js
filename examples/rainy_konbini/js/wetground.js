@@ -123,16 +123,16 @@ const WetShader = {
 			for ( int i = 0; i < 6; i ++ ) {
 				float fi = float( i ) / 5.0;
 				float w = 1.0 - fi * 0.7;
-				vec2 o = vec2( ( h2( p * 91.0 + fi ) - 0.5 ) * 0.004, - fi * 0.055 ) * rough;
+				vec2 o = vec2( ( h2( p * 91.0 + fi ) - 0.5 ) * 0.01, - fi * 0.075 ) * rough;
 				refl += texture2D( tDiffuse, uv + distort + o ).rgb * w;
 				wsum += w;
 			}
 			refl /= wsum;
 
-			float wetK = mix( 0.42, 0.95, puddle );
-			float a = wetK * mix( 0.55, 1.0, fresnel ) * uStrength;
+			float wetK = mix( 0.22, 0.9, puddle );
+			float a = wetK * mix( 0.32, 1.0, fresnel ) * uStrength;
 			// water tint: slightly cool and dark
-			vec3 col = refl * mix( vec3( 0.75, 0.8, 0.88 ), vec3( 0.92, 0.95, 1.0 ), puddle );
+			vec3 col = refl * mix( vec3( 0.6, 0.66, 0.75 ), vec3( 0.88, 0.92, 1.0 ), puddle );
 			// specular glints from ripples catching the ambient sky
 			col += vec3( 0.25, 0.32, 0.45 ) * length( grad ) * 0.08;
 

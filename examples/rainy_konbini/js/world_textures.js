@@ -88,7 +88,7 @@ export function makeTextures( renderer, Q ) {
 	}, { aniso } );
 
 	// ---------------- decal atlas (posters, stickers, labels; with alpha) ----------------
-	const D = new Atlas( 1024 );
+	const D = new Atlas( 1024, null, 0.74 );
 	const poster = ( key, w, h, bg, fn ) => D.draw( key, w, h, ( c ) => {
 
 		c.fillStyle = bg; roundRect( c, 2, 2, w - 4, h - 4, 10 ); c.fill();
@@ -398,7 +398,7 @@ export function makeTextures( renderer, Q ) {
 	T.D = D.rects;
 
 	// ---------------- emissive atlas (lit signage, screens) ----------------
-	const E = new Atlas( 1024, '#000' );
+	const E = new Atlas( 1024, '#000', 0.8 );
 	const aisle = ( key, txt, sub, col ) => E.draw( key, 320, 96, ( c, w, h ) => {
 
 		c.fillStyle = col; c.fillRect( 0, 0, w, h );

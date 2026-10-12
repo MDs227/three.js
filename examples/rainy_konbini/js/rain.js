@@ -123,7 +123,7 @@ function makeStreaks( count ) {
 			varying float vAlpha;
 			void main() {
 				float a = smoothstep( 0.0, 0.35, vUv.y ) * ( 1.0 - abs( vUv.x - 0.5 ) * 2.0 );
-				gl_FragColor = vec4( vCol * a * vAlpha * 0.55, 1.0 );
+				gl_FragColor = vec4( vCol * a * vAlpha * 0.38, 1.0 );
 			}
 		`,
 		transparent: true,

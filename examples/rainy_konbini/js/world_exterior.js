@@ -531,7 +531,7 @@ export function buildExterior( ctx ) {
 	// ================= exterior lights =================
 	// entrance warm downlight under eave (shadow caster #2)
 	const shadowSize = Q >= 2 ? 2048 : Q >= 1 ? 1024 : 512;
-	const ent = new THREE.SpotLight( 0xffc890, 28, 11, 1.05, 0.85, 2 );
+	const ent = new THREE.SpotLight( 0xffc890, 14, 11, 1.05, 0.85, 2 );
 	ent.position.set( 3.5, 2.95, 0.85 );
 	ent.target.position.set( 3.5, 0, 2.7 );
 	ent.castShadow = Q >= 1;

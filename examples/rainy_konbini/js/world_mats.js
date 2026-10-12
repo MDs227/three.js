@@ -33,12 +33,12 @@ export function makeMaterials( T ) {
 	M.emit = new THREE.MeshBasicMaterial( { name: 'emit', vertexColors: true } );
 	M.emitTex = new THREE.MeshBasicMaterial( { name: 'emitTex', map: T.emis, color: new THREE.Color( 1.6, 1.6, 1.6 ), vertexColors: true } );
 	M.decal = new THREE.MeshStandardMaterial( { name: 'decal', map: T.decal, transparent: true, alphaTest: 0.05, roughness: 0.35, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: - 2, polygonOffsetUnits: - 2 } );
-	M.decalLit = new THREE.MeshBasicMaterial( { name: 'decalLit', map: T.decal, transparent: true, alphaTest: 0.05, color: new THREE.Color( 1.25, 1.25, 1.25 ), depthWrite: false, polygonOffset: true, polygonOffsetFactor: - 2, polygonOffsetUnits: - 2 } );
+	M.decalLit = new THREE.MeshBasicMaterial( { name: 'decalLit', map: T.decal, transparent: true, alphaTest: 0.05, color: new THREE.Color( 0.95, 0.95, 0.95 ), depthWrite: false, polygonOffset: true, polygonOffsetFactor: - 2, polygonOffsetUnits: - 2 } );
 	M.paintDecal = new THREE.MeshStandardMaterial( { name: 'paintDecal', map: T.decal, transparent: true, alphaTest: 0.1, roughness: 0.3, depthWrite: false, polygonOffset: true, polygonOffsetFactor: - 3, polygonOffsetUnits: - 3 } );
-	M.signBand = new THREE.MeshBasicMaterial( { name: 'signBand', map: T.signBand, color: new THREE.Color( 2.4, 2.4, 2.4 ) } );
-	M.signLogo = new THREE.MeshBasicMaterial( { name: 'signLogo', map: T.signLogo, color: new THREE.Color( 2.6, 2.6, 2.6 ) } );
-	M.sign24 = new THREE.MeshBasicMaterial( { name: 'sign24', map: T.sign24, color: new THREE.Color( 2.4, 2.4, 2.4 ) } );
-	M.pylon = new THREE.MeshBasicMaterial( { name: 'pylon', map: T.pylon, color: new THREE.Color( 2.2, 2.2, 2.2 ) } );
+	M.signBand = new THREE.MeshBasicMaterial( { name: 'signBand', map: T.signBand, color: new THREE.Color( 1.75, 1.75, 1.75 ) } );
+	M.signLogo = new THREE.MeshBasicMaterial( { name: 'signLogo', map: T.signLogo, color: new THREE.Color( 1.8, 1.8, 1.8 ) } );
+	M.sign24 = new THREE.MeshBasicMaterial( { name: 'sign24', map: T.sign24, color: new THREE.Color( 1.75, 1.75, 1.75 ) } );
+	M.pylon = new THREE.MeshBasicMaterial( { name: 'pylon', map: T.pylon, color: new THREE.Color( 1.7, 1.7, 1.7 ) } );
 	M.vend = new THREE.MeshBasicMaterial( { name: 'vend', map: T.vend, color: new THREE.Color( 1.7, 1.75, 1.85 ) } );
 	M.flags = new THREE.MeshStandardMaterial( { name: 'flags', map: T.flags, roughness: 0.55, side: THREE.DoubleSide } );
 	M.flags.userData.cast = true;
