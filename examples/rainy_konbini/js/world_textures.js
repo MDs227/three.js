@@ -785,7 +785,7 @@ export function makeTextures( renderer, Q ) {
 	T.mags = canvasTex( 512, 512, ( c ) => {
 
 		const r = rng( 13 );
-		const titles = [ '週刊ツキ', 'NIGHT', 'まんが王', 'クルマ', '料理の友', 'GAME!', '旅と雨', 'ファッション', '少年ムーン', 'Tokyo Walk', '釣り', 'パズル', 'スポーツ', '女性セブン星', 'カメラ', 'ねこ日和' ];
+		const titles = [ '週刊ツキ', 'NIGHT', 'まんが王', 'クルマ', '料理の友', 'GAME!', '旅と雨', 'ファッション', '少年ムーン', 'Tokyo Walk', '釣り', 'パズル', 'スポーツ', '週刊ほしぞら', 'カメラ', 'ねこ日和' ];
 		for ( let i = 0; i < 16; i ++ ) {
 
 			const x = ( i % 4 ) * 128, y = Math.floor( i / 4 ) * 128;

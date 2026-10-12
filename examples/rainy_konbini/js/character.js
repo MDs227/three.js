@@ -21,7 +21,7 @@ function mulberry( seed ) {
 }
 
 const _v0 = new THREE.Vector3(), _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3();
-const _v4 = new THREE.Vector3(), _v5 = new THREE.Vector3(), _v6 = new THREE.Vector3();
+const _v4 = new THREE.Vector3(), _v5 = new THREE.Vector3(), _v6 = new THREE.Vector3(), _v7 = new THREE.Vector3();
 const _q0 = new THREE.Quaternion(), _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion();
 const _m0 = new THREE.Matrix4(), _m1 = new THREE.Matrix4(), _m2 = new THREE.Matrix4();
 const _e0 = new THREE.Euler();
@@ -1388,12 +1388,16 @@ export class Girl {
 		const topRest = _v3.copy( grip ).addScaledVector( uDir, UMB.apexY );
 		if ( ! this._umbTopInit || this._teleport ) { this._umbTop.copy( topRest ); this._umbTopV.set( 0, 0, 0 ); this._umbTopInit = true; }
 		if ( dt > 0 ) {
-			const k = 110, c = 13;
-			_v1.subVectors( topRest, this._umbTop ).multiplyScalar( k ).addScaledVector( this._umbTopV, - c );
-			this._umbTopV.addScaledVector( _v1, dt );
-			this._umbTop.addScaledVector( this._umbTopV, dt );
-			_v1.subVectors( this._umbTop, grip ).setLength( UMB.apexY );
-			this._umbTop.copy( grip ).add( _v1 );
+			// sub-stepped damped spring on a fixed-length boom (radial velocity removed each step)
+			const k = 110, c = 13, n = Math.ceil( dt / ( 1 / 120 ) ), h = dt / n;
+			for ( let i = 0; i < n; i ++ ) {
+				_v1.subVectors( topRest, this._umbTop ).multiplyScalar( k ).addScaledVector( this._umbTopV, - c );
+				this._umbTopV.addScaledVector( _v1, h );
+				this._umbTop.addScaledVector( this._umbTopV, h );
+				_v1.subVectors( this._umbTop, grip ).normalize();
+				this._umbTopV.addScaledVector( _v1, - this._umbTopV.dot( _v1 ) );
+				this._umbTop.copy( grip ).addScaledVector( _v1, UMB.apexY );
+			}
 		}
 		const uFinal = _v1.subVectors( this._umbTop, grip ).normalize();
 		const fwd = _v2.set( 0, 0, 1 ).applyQuaternion( rootQ );
@@ -1425,16 +1429,26 @@ export class Girl {
 		if ( bArm < 0.999 ) {
 			const crookW = _v3.set( 0, - 0.102, 0.042 ).applyMatrix4( Um );
 			const axis = _v4.set( 0, 1, 0 ).transformDirection( Um );
-			const tipRest = _v5.copy( crookW ).addScaledVector( axis, 0.8 );
-			if ( ! this._umbTipInit || this._teleport ) { this._umbTip.copy( tipRest ); this._umbTipV.set( 0, 0, 0 ); this._umbTipInit = true; }
+			// rest direction: mostly gravity, a little of the hand's axis
+			const tipRest = _v5.copy( axis ).multiplyScalar( 0.5 ).add( _v7.set( 0, - 1.6, 0 ) ).setLength( 0.8 ).add( crookW );
+			if ( ! this._umbTipInit || this._teleport ) {
+				// start already hanging under gravity so it doesn't whip on the first frames
+				_v6.subVectors( tipRest, crookW ).normalize();
+				this._umbTip.copy( crookW ).addScaledVector( _v6, 0.8 ); this._umbTipV.set( 0, 0, 0 ); this._umbTipInit = true;
+			}
 			if ( dt > 0 ) {
-				const k = 45, c = 4.5;
-				_v6.subVectors( tipRest, this._umbTip ).multiplyScalar( k ).addScaledVector( this._umbTipV, - c );
-				_v6.y -= 2.0;
-				this._umbTipV.addScaledVector( _v6, dt );
-				this._umbTip.addScaledVector( this._umbTipV, dt );
-				_v6.subVectors( this._umbTip, crookW ).setLength( 0.8 );
-				this._umbTip.copy( crookW ).add( _v6 );
+				const k = 45, c = 7.5, n = Math.ceil( dt / ( 1 / 120 ) ), h = dt / n;
+				for ( let i = 0; i < n; i ++ ) {
+					_v6.subVectors( tipRest, this._umbTip ).multiplyScalar( k ).addScaledVector( this._umbTipV, - c );
+					_v6.y -= 2.0;
+					this._umbTipV.addScaledVector( _v6, h );
+					this._umbTip.addScaledVector( this._umbTipV, h );
+					_v6.subVectors( this._umbTip, crookW ).normalize();
+					this._umbTipV.addScaledVector( _v6, - this._umbTipV.dot( _v6 ) );
+					this._umbTip.copy( crookW ).addScaledVector( _v6, 0.8 );
+					const floor = this.root.position.y + 0.03;
+					if ( this._umbTip.y < floor ) { this._umbTip.y = floor; if ( this._umbTipV.y < 0 ) this._umbTipV.y = 0; }
+				}
 			}
 			_v6.subVectors( this._umbTip, crookW ).normalize();
 			_q2.setFromUnitVectors( axis, _v6 );

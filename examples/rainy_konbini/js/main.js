@@ -184,7 +184,7 @@ const hud = new Hud( {
 	onQuality: q => {
 
 		safeSet( 'konbini.q', q );
-		location.search = '?q=' + q;
+		if ( params.has( 'q' ) ) location.search = '?q=' + q; else location.reload();
 
 	},
 	onRestart: () => location.reload(),
